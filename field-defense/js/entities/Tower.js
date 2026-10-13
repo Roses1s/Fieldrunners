@@ -220,7 +220,8 @@ export class Tower {
       g.save();
       g.rotate(this.angle);
       g.translate(-rec, 0);
-      g.drawImage(img, -px * s, -py * s, img.width * s, img.height * s);
+      const ts = s * 1.12;   // турель чуть крупнее плиты — «мультяшная» масса
+      g.drawImage(img, -px * ts, -py * ts, img.width * ts, img.height * ts);
       g.restore();
     }
 

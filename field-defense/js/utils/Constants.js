@@ -106,17 +106,17 @@ export const CONFIG = {
   // Биомы → палитры тайлов
   PALETTES: {
     grass: {
-      ground: ['#79c64f', '#6fbb47', '#82cd57', '#74c04c'],
+      ground: ['#83d154', '#74c945', '#8ed95e', '#7ac94c'],
       groundDark: '#4f9536',
-      path: '#d9a863',
+      path: '#e0aa5e',
       pathEdge: '#a97c42',
       pathSpeck: '#c1914f',
       fog: 'rgba(255,255,255,0.04)'
     },
     desert: {
-      ground: ['#e9d494', '#e0c983', '#f0dda2', '#e5cf8c'],
+      ground: ['#f0d795', '#e6cc82', '#f5e0a4', '#ecd08a'],
       groundDark: '#b99f5f',
-      path: '#cfa96a',
+      path: '#d9ad67',
       pathEdge: '#a3803f',
       pathSpeck: '#b9954f',
       fog: 'rgba(255,220,160,0.05)'

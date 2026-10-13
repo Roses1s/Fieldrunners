@@ -97,7 +97,7 @@ function buildTile(biome, variant) {
   g.fillRect(0, 0, S, S);
 
   // Мягкие пятна травы/песка
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 36; i++) {
     const x = rng() * S, y = rng() * S, r = 3 + rng() * 10;
     g.fillStyle = pal.ground[(variant + 1 + ((rng() * 3) | 0)) % pal.ground.length];
     g.globalAlpha = 0.35 + rng() * 0.3;
@@ -109,7 +109,7 @@ function buildTile(biome, variant) {
     // травинки
     g.strokeStyle = shade(pal.groundDark, 0.18);
     g.lineWidth = 1.6;
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 32; i++) {
       const x = rng() * S, y = rng() * S, h = 3 + rng() * 5, a = (rng() - 0.5) * 0.7;
       g.beginPath();
       g.moveTo(x, y);
@@ -428,12 +428,12 @@ function buildTeslaTurret(level) {
 
 /** Универсальный пехотинец: 6 кадров ходьбы. size — сторона canvas. */
 function buildHumanoidFrames(tint, opts = {}) {
-  const S = opts.size || 30;
+  const S = opts.size || 38;
   const frames = opts.frames || 6;
-  const dark = shade(tint, -0.32);
-  const light = shade(tint, 0.22);
-  const skin = '#e8b48c';
-  const metal = '#4b5260';
+  const dark = shade(tint, -0.34);
+  const light = shade(tint, 0.26);
+  const skin = '#eec39a';
+  const metal = '#454c59';
   const out = [];
 
   for (let f = 0; f < frames; f++) {
@@ -441,64 +441,67 @@ function buildHumanoidFrames(tint, opts = {}) {
     const cx = S / 2;
     const t = f / frames;
     const swing = Math.sin(t * Math.PI * 2);
-    const bob = Math.abs(Math.cos(t * Math.PI * 2)) * 1.4;
-    const feet = S - 4;
-    const hip = feet - 8 - bob;
+    const bob = Math.abs(Math.cos(t * Math.PI * 2)) * 1.8;
+    const feet = S - 5;
+    const hip = feet - 10 - bob;
 
     // тень
-    g.fillStyle = 'rgba(0,0,0,0.22)';
-    g.beginPath(); g.ellipse(cx, S - 3, 7.5, 2.8, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    g.beginPath(); g.ellipse(cx, S - 3.5, 9.5, 3.4, 0, 0, Math.PI * 2); g.fill();
 
-    // ноги
-    g.strokeStyle = dark; g.lineWidth = 3.6;
+    // ноги (толстые, с размахом шага)
+    g.strokeStyle = dark; g.lineWidth = 4.6; g.lineCap = 'round';
     g.beginPath();
-    g.moveTo(cx, hip); g.lineTo(cx + swing * 4.6, feet);
-    g.moveTo(cx, hip); g.lineTo(cx - swing * 4.6, feet);
+    g.moveTo(cx, hip); g.lineTo(cx + swing * 5.6, feet);
+    g.moveTo(cx, hip); g.lineTo(cx - swing * 5.6, feet);
     g.stroke();
     // ботинки
-    g.fillStyle = '#2f3540';
-    fillRR(g, cx + swing * 4.6 - 3, feet - 2.5, 6.5, 3.2, 1.4, '#2f3540', 0);
-    fillRR(g, cx - swing * 4.6 - 3.5, feet - 2.5, 6.5, 3.2, 1.4, '#2f3540', 0);
+    fillRR(g, cx + swing * 5.6 - 3.8, feet - 3, 8, 4, 1.8, '#2b3038', 0);
+    fillRR(g, cx - swing * 5.6 - 4.4, feet - 3, 8, 4, 1.8, '#2b3038', 0);
 
-    // торс
-    const torsoTop = hip - 11;
-    fillRR(g, cx - 5.5, torsoTop, 11, 12, 3.5, vgrad(g, cx - 5.5, torsoTop, 11, 12, light, tint), 2);
+    // торс: широкий, с градиентом и бликом
+    const torsoTop = hip - 14;
+    fillRR(g, cx - 7, torsoTop, 14, 15, 4.5, vgrad(g, cx - 7, torsoTop, 14, 15, light, tint), 2.6);
+    g.fillStyle = 'rgba(255,255,255,0.20)';
+    rr(g, cx - 5.4, torsoTop + 1.6, 4.4, 10, 2.2); g.fill();
     // разгрузка
-    g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 1.4;
-    g.beginPath(); g.moveTo(cx - 4, torsoTop + 4); g.lineTo(cx + 4, torsoTop + 4); g.stroke();
+    g.strokeStyle = 'rgba(0,0,0,0.30)'; g.lineWidth = 1.8;
+    g.beginPath(); g.moveTo(cx - 5, torsoTop + 5); g.lineTo(cx + 5, torsoTop + 5); g.stroke();
+    g.beginPath(); g.moveTo(cx - 5, torsoTop + 9); g.lineTo(cx + 5, torsoTop + 9); g.stroke();
 
     // рюкзак
-    fillRR(g, cx - 9, torsoTop + 1, 5, 8, 2, dark, 1.6);
+    fillRR(g, cx - 11.5, torsoTop + 1, 6, 10, 2.4, dark, 2);
 
     // руки + оружие
-    g.strokeStyle = tint; g.lineWidth = 3;
-    const armY = torsoTop + 4;
-    g.beginPath(); g.moveTo(cx, armY); g.lineTo(cx + 6 + swing, armY + 2); g.stroke();
-    // винтовка
+    g.strokeStyle = tint; g.lineWidth = 3.8;
+    const armY = torsoTop + 5;
+    g.beginPath(); g.moveTo(cx, armY); g.lineTo(cx + 7 + swing, armY + 2.4); g.stroke();
     if (!opts.noGun) {
-      fillRR(g, cx + 3, armY - 1.4, 13, 3, 1.4, metal, 1.4);
-      fillRR(g, cx + 6, armY + 1, 3, 4, 1, '#3a404c', 1);
+      fillRR(g, cx + 3.5, armY - 1.8, 16, 3.8, 1.8, metal, 1.8);
+      fillRR(g, cx + 7, armY + 1.4, 3.6, 5, 1.2, '#363d48', 1);
+      circle(g, cx + 19.5, armY, 1.4, '#20242c', 0);
     }
 
-    // голова
-    const hy = torsoTop - 4.5;
-    circle(g, cx + 1, hy, 4.6, skin, 2);
-    // шлем
+    // голова: крупная, в шлеме
+    const hy = torsoTop - 5.5;
+    circle(g, cx + 1, hy, 5.8, skin, 2.4);
     g.fillStyle = opts.helm || dark;
     g.beginPath();
-    g.arc(cx + 1, hy - 0.6, 5.1, Math.PI * 1.02, Math.PI * 2.02);
+    g.arc(cx + 1, hy - 0.8, 6.5, Math.PI * 1.02, Math.PI * 2.02);
     g.closePath();
-    g.lineWidth = 2; g.strokeStyle = OUTLINE; g.stroke(); g.fill();
-    // глаз
-    circle(g, cx + 3.4, hy + 0.6, 0.9, '#22262e', 0);
+    g.lineWidth = 2.4; g.strokeStyle = OUTLINE; g.stroke(); g.fill();
+    // козырёк шлема
+    fillRR(g, cx - 4.6, hy - 2.2, 11.5, 2.6, 1.3, opts.helm || dark, 1.6);
+    // глаз и щёчка
+    circle(g, cx + 4.2, hy + 0.8, 1.1, '#22262e', 0);
 
     // «след скорости» для бегуна
     if (opts.speedLines) {
-      g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.4;
+      g.strokeStyle = 'rgba(255,255,255,0.4)'; g.lineWidth = 1.8;
       for (let i = 0; i < 3; i++) {
         g.beginPath();
-        g.moveTo(cx - 8 - i * 3, torsoTop + 2 + i * 3.5);
-        g.lineTo(cx - 14 - i * 3, torsoTop + 2 + i * 3.5);
+        g.moveTo(cx - 10 - i * 3.6, torsoTop + 2.5 + i * 4.2);
+        g.lineTo(cx - 17 - i * 3.6, torsoTop + 2.5 + i * 4.2);
         g.stroke();
       }
     }
