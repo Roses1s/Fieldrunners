@@ -263,6 +263,7 @@ export class Game {
           this.time += dt;
         }
         if (steps >= maxSteps) this.acc = 0;
+        this.lastSteps = steps;          // для отладочной плашки
       } else {
         // сцена на паузе — время всё равно идёт (для анимаций оверлея)
         top.update(frameTime);
@@ -271,7 +272,11 @@ export class Game {
     }
 
     // ---- рендер ----
+    const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
     if (shouldRender) this.render();
+    const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+    // скользящее среднее стоимости кадра (логика + рендер) — для отладки
+    this.frameMs = this.frameMs ? this.frameMs * 0.9 + (t1 - t0) * 0.1 : (t1 - t0);
   }
 
   render() {
@@ -304,8 +309,11 @@ export class Game {
     const parts = [
       `FPS ${this.fps.toFixed(0)}`,
       `zoom ${this.camera.zoom.toFixed(2)}`,
-      `scene ${top?.constructor?.name || '-'}`
+      `scene ${top?.constructor?.name || '-'}`,
+      `frame ${(this.frameMs || 0).toFixed(2)} ms`,
+      `steps ${this.lastSteps || 0}/${CONFIG.MAX_STEPS_PER_FRAME * Math.max(1, top?.gameSpeed || 1)}`
     ];
+    if (this.debugGrid) parts.push('grid ON (G — выключить)');
     if (top instanceof GameScene) {
       parts.push(`enemies ${top.enemies.length}`);
       parts.push(`towers ${top.towers.length}`);

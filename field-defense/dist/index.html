@@ -6564,7 +6564,6 @@ class RenderSystem {
     this.routeVersion = -1;
     this.routePoints = [];
     this.renderList = [];
-    this.debugPath = false;
   }
 
   get pal() { return CONFIG.PALETTES[this.grid.biome] || CONFIG.PALETTES.grass; }
@@ -6971,6 +6970,125 @@ class RenderSystem {
 
     // ---- сущности с сортировкой по глубине ----
     this._renderEntities(g, view);
+
+    // ---- отладочная сетка (клавиша G): типы клеток + flow-field ----
+    if (this.game.debugGrid) this._renderDebugGrid(g, view);
+  }
+
+  /**
+   * Отладочный оверлей сетки. Показывает:
+   *   • тип каждой клетки (пусто / путь / заблокировано / башня / вход / выход);
+   *   • направления flow-field стрелками (куда пойдёт наземный враг);
+   *   • красным крестом — проходимые клетки без пути к выходу (замурованы);
+   *   • радиусы всех башен.
+   * Рисуется только по видимым клеткам (culling), поэтому дёшево.
+   */
+  _renderDebugGrid(g, view) {
+    const grid = this.grid;
+    const path = this.game.path;
+    const FILL = {
+      [TILE.EMPTY]: 'rgba(120,230,140,0.10)',
+      [TILE.PATH]: 'rgba(255,206,120,0.16)',
+      [TILE.BLOCKED]: 'rgba(150,150,175,0.22)',
+      [TILE.TOWER]: 'rgba(120,190,255,0.20)',
+      [TILE.ENTRY]: 'rgba(255,110,110,0.30)',
+      [TILE.EXIT]: 'rgba(110,255,200,0.30)'
+    };
+    const INF = 0x3fffffff;
+
+    const minCx = Math.max(0, Math.floor(view.x / CELL));
+    const maxCx = Math.min(grid.cols - 1, Math.ceil((view.x + view.w) / CELL));
+    const minCy = Math.max(0, Math.floor(view.y / CELL));
+    const maxCy = Math.min(grid.rows - 1, Math.ceil((view.y + view.h) / CELL));
+
+    g.save();
+
+    // --- заливка по типу клетки ---
+    for (let cy = minCy; cy <= maxCy; cy++) {
+      for (let cx = minCx; cx <= maxCx; cx++) {
+        const i = grid.idx(cx, cy);
+        const t = grid.tileByIdx(i);
+        const col = FILL[t];
+        if (!col) continue;
+        g.fillStyle = col;
+        g.fillRect(cx * CELL, cy * CELL, CELL, CELL);
+      }
+    }
+
+    // --- линии сетки ---
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(255,255,255,0.14)';
+    g.beginPath();
+    for (let cx = minCx; cx <= maxCx + 1; cx++) {
+      g.moveTo(cx * CELL, minCy * CELL);
+      g.lineTo(cx * CELL, (maxCy + 1) * CELL);
+    }
+    for (let cy = minCy; cy <= maxCy + 1; cy++) {
+      g.moveTo(minCx * CELL, cy * CELL);
+      g.lineTo((maxCx + 1) * CELL, cy * CELL);
+    }
+    g.stroke();
+
+    // --- flow-field: стрелки к выходу + отметки замурованных клеток ---
+    if (path) {
+      g.lineWidth = 2;
+      g.strokeStyle = 'rgba(255,255,255,0.55)';
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      for (let cy = minCy; cy <= maxCy; cy++) {
+        for (let cx = minCx; cx <= maxCx; cx++) {
+          const i = grid.idx(cx, cy);
+          if (!grid.isWalkable(i)) continue;
+          const px = cx * CELL + CELL / 2;
+          const py = cy * CELL + CELL / 2;
+
+          if (path.dist[i] >= INF) {
+            // проходимая клетка без маршрута — строить здесь нельзя
+            g.strokeStyle = 'rgba(255,90,90,0.9)';
+            g.beginPath();
+            g.moveTo(px - 7, py - 7); g.lineTo(px + 7, py + 7);
+            g.moveTo(px + 7, py - 7); g.lineTo(px - 7, py + 7);
+            g.stroke();
+            g.strokeStyle = 'rgba(255,255,255,0.55)';
+            continue;
+          }
+          if (path.dist[i] === 0) continue;   // это выход
+
+          const ni = path.next[i];
+          if (ni < 0 || ni >= path.next.length) continue;
+          const ncx = ni % grid.cols;
+          const ncy = (ni / grid.cols) | 0;
+          const dx = ncx - cx, dy = ncy - cy;
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len, uy = dy / len;
+          const x1 = px + ux * 4, y1 = py + uy * 4;
+          const x2 = px + ux * 14, y2 = py + uy * 14;
+
+          g.beginPath();
+          g.moveTo(x1, y1);
+          g.lineTo(x2, y2);
+          g.stroke();
+          // наконечник
+          g.beginPath();
+          g.moveTo(x2, y2);
+          g.lineTo(x2 - ux * 5 - uy * 3.4, y2 - uy * 5 + ux * 3.4);
+          g.lineTo(x2 - ux * 5 + uy * 3.4, y2 - uy * 5 - ux * 3.4);
+          g.closePath();
+          g.fill();
+        }
+      }
+    }
+
+    // --- радиусы башен ---
+    g.lineWidth = 1.5;
+    g.strokeStyle = 'rgba(140,210,255,0.45)';
+    for (const t of grid.allTowers()) {
+      if (!t) continue;
+      g.beginPath();
+      g.arc(t.x, t.y, t.range, 0, Math.PI * 2);
+      g.stroke();
+    }
+
+    g.restore();
   }
 
   _renderRouteHint(g) {
@@ -9815,6 +9933,7 @@ class Game {
           this.time += dt;
         }
         if (steps >= maxSteps) this.acc = 0;
+        this.lastSteps = steps;          // для отладочной плашки
       } else {
         // сцена на паузе — время всё равно идёт (для анимаций оверлея)
         top.update(frameTime);
@@ -9823,7 +9942,11 @@ class Game {
     }
 
     // ---- рендер ----
+    const t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
     if (shouldRender) this.render();
+    const t1 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+    // скользящее среднее стоимости кадра (логика + рендер) — для отладки
+    this.frameMs = this.frameMs ? this.frameMs * 0.9 + (t1 - t0) * 0.1 : (t1 - t0);
   }
 
   render() {
@@ -9856,8 +9979,11 @@ class Game {
     const parts = [
       `FPS ${this.fps.toFixed(0)}`,
       `zoom ${this.camera.zoom.toFixed(2)}`,
-      `scene ${top?.constructor?.name || '-'}`
+      `scene ${top?.constructor?.name || '-'}`,
+      `frame ${(this.frameMs || 0).toFixed(2)} ms`,
+      `steps ${this.lastSteps || 0}/${CONFIG.MAX_STEPS_PER_FRAME * Math.max(1, top?.gameSpeed || 1)}`
     ];
+    if (this.debugGrid) parts.push('grid ON (G — выключить)');
     if (top instanceof GameScene) {
       parts.push(`enemies ${top.enemies.length}`);
       parts.push(`towers ${top.towers.length}`);

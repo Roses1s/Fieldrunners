@@ -470,6 +470,23 @@ section('5. HUD при разных размерах экрана');
       scene.render(ctx);
     });
 
+    // отладочная сетка (клавиша G): типы клеток + flow-field + радиусы башен
+    safe(`отладочная сетка ${name}`, () => {
+      scene.game.debugGrid = false;
+      scene.onKey('g');                          // клавиша включает оверлей
+      if (!scene.game.debugGrid) throw new Error('клавиша G не включила debugGrid');
+
+      const before = ctxCalls;
+      scene.render(ctx);
+      const drawn = ctxCalls - before;
+      if (drawn < 200) throw new Error(`оверлей нарисовал подозрительно мало (${drawn} вызовов)`);
+      if (unknownCtx.size) throw new Error('незнакомые методы Canvas2D: ' + [...unknownCtx.keys()].join(', '));
+
+      scene.onKey('g');                          // и выключает обратно
+      if (scene.game.debugGrid) throw new Error('клавиша G не выключила debugGrid');
+      scene.render(ctx);
+    });
+
     // масштаб карты вписан в экран
     const cam = game.camera;
     ok(cam.zoom * scene.worldW <= w + 2 && cam.zoom * scene.worldH <= h + 2,
