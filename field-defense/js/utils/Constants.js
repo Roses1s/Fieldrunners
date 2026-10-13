@@ -141,17 +141,17 @@ export const CONFIG = {
 
   // Общая палитра UI
   UI: {
-    panel: 'rgba(18, 26, 48, 0.9)',
-    panelStroke: 'rgba(140, 180, 255, 0.35)',
+    panel: 'rgba(26, 21, 16, 0.93)',
+    panelStroke: 'rgba(255, 205, 120, 0.55)',
     accent: '#ffd23f',
-    accent2: '#4fd1ff',
-    text: '#eaf1ff',
-    dim: 'rgba(234, 241, 255, 0.55)',
+    accent2: '#7fe0ff',
+    text: '#fdf6e3',
+    dim: 'rgba(253, 246, 227, 0.55)',
     danger: '#ff5a5a',
     ok: '#6ee36e',
-    button: '#2a3b66',
-    buttonHi: '#3a5490',
-    buttonDisabled: '#232a3d'
+    button: '#4c3a22',
+    buttonHi: '#6b532f',
+    buttonDisabled: '#2c2620'
   }
 };
 

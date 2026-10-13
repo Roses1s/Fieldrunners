@@ -29,9 +29,19 @@ export function panel(g, x, y, w, h, r = 14, opts = {}) {
   g.shadowBlur = 0;
   g.shadowOffsetY = 0;
   if (opts.stroke !== false) {
-    g.lineWidth = opts.lineWidth ?? 2;
+    g.lineWidth = opts.lineWidth ?? 2.5;
     g.strokeStyle = opts.strokeColor || UI.panelStroke;
     g.stroke();
+    // внутренний блик сверху — панель выглядит «толстой» игровой плашкой
+    g.save();
+    rr(g, x + 3, y + 3, w - 6, h - 6, Math.max(2, r - 3));
+    g.clip();
+    const hg = g.createLinearGradient(0, y, 0, y + h * 0.45);
+    hg.addColorStop(0, 'rgba(255,255,255,0.13)');
+    hg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = hg;
+    g.fillRect(x, y, w, h * 0.45);
+    g.restore();
   }
   g.restore();
 }

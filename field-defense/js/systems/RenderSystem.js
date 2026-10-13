@@ -61,29 +61,50 @@ export class RenderSystem {
       }
     }
 
-    // ---- 1.5 фактурная крошка по земле (запекается, детерминированно) ----
+    // ---- 1.5 живописные пятна: крупные мягкие мазки света/тени ----
+    {
+      const brng = makeRng((g.def.seed || 11) + 313);
+      c.save();
+      for (let i = 0; i < 30; i++) {
+        const x = brng() * g.worldW, y = brng() * g.worldH;
+        const r = 50 + brng() * 150;
+        const light = brng() < 0.5;
+        const col = light ? pal.ground[2] : pal.groundDark;
+        const gr = c.createRadialGradient(x, y, 2, x, y, r);
+        gr.addColorStop(0, col);
+        gr.addColorStop(1, 'rgba(0,0,0,0)');
+        c.globalAlpha = light ? 0.10 : 0.12;
+        c.fillStyle = gr;
+        c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+      }
+      c.restore();
+    }
+
+    // ---- 1.6 детали земли по биому (пропускаем дорогу/зоны/декор) ----
     {
       const drng = makeRng((g.def.seed || 7) + 901);
+      const zoneCells = new Set();
+      for (const z of (g.zones || [])) {
+        for (let zy = z.y; zy < z.y + z.h; zy++) {
+          for (let zx = z.x; zx < z.x + z.w; zx++) zoneCells.add(g.idx(zx, zy));
+        }
+      }
+      const decorCells = new Set(g.decor.map(d => g.idx(d.cx, d.cy)));
       c.save();
       for (let cy = 0; cy < g.rows; cy++) {
         for (let cx = 0; cx < g.cols; cx++) {
+          const i = g.idx(cx, cy);
+          const t = g.tileByIdx(i);
+          if (t === TILE.PATH || t === TILE.ENTRY || t === TILE.EXIT) continue;
+          if (zoneCells.has(i) || decorCells.has(i)) continue;
           const bx = cx * CELL, by = cy * CELL;
-          for (let k = 0; k < 3; k++) {
-            const x = bx + drng() * CELL, y = by + drng() * CELL;
-            if (g.biome === 'grass') {
-              c.strokeStyle = 'rgba(38,92,28,0.5)';
-              c.lineWidth = 1.4;
-              c.beginPath(); c.moveTo(x, y); c.lineTo(x + (drng() - 0.5) * 3, y - 2.5 - drng() * 3); c.stroke();
-            } else if (g.biome === 'desert') {
-              c.fillStyle = 'rgba(120,84,40,0.35)';
-              c.beginPath(); c.arc(x, y, 0.8 + drng() * 1.4, 0, Math.PI * 2); c.fill();
-            } else if (g.biome === 'lava') {
-              c.fillStyle = 'rgba(0,0,0,0.30)';
-              c.beginPath(); c.arc(x, y, 0.8 + drng() * 1.6, 0, Math.PI * 2); c.fill();
-            } else {
-              c.fillStyle = 'rgba(255,255,255,0.10)';
-              c.fillRect(x, y, 1.6, 1.6);
-            }
+          const n = 2 + ((drng() * 3) | 0);
+          for (let k = 0; k < n; k++) {
+            const x = bx + 4 + drng() * (CELL - 8), y = by + 4 + drng() * (CELL - 8);
+            if (g.biome === 'grass') this._detailGrass(c, drng, x, y);
+            else if (g.biome === 'desert') this._detailDesert(c, drng, x, y);
+            else if (g.biome === 'lava') this._detailLava(c, drng, x, y);
+            else this._detailCity(c, drng, x, y);
           }
         }
       }
@@ -115,7 +136,8 @@ export class RenderSystem {
       const img = Sprites.get(key) || Sprites.get('decor.rock');
       if (!img) continue;
       const x = cx_(d.cx), y = cy_(d.cy);
-      const s = d.scale || 1;
+      const BIG = { tree: 1.32, pine: 1.32, bush: 1.28, cactus: 1.28, rock: 1.22, flower: 1.35, barrel: 1.2, building: 1.12 };
+      const s = (d.scale || 1) * (BIG[d.type] || 1);
       c.drawImage(img, x - img.width * s / 2, y + CELL * 0.32 - img.height * s, img.width * s, img.height * s);
     }
 
@@ -131,6 +153,103 @@ export class RenderSystem {
     vg.addColorStop(1, 'rgba(0,0,0,0.12)');
     c.fillStyle = vg;
     c.fillRect(0, 0, g.worldW, g.worldH);
+
+    // ---- 8. рамка карты: тёмная кромка «обрыва» по периметру ----
+    c.save();
+    c.strokeStyle = 'rgba(0,0,0,0.28)';
+    c.lineWidth = 10;
+    c.strokeRect(5, 5, g.worldW - 10, g.worldH - 10);
+    c.strokeStyle = 'rgba(255,255,255,0.10)';
+    c.lineWidth = 2;
+    c.strokeRect(11, 11, g.worldW - 22, g.worldH - 22);
+    c.restore();
+  }
+
+  /* ---------------- детали земли по биомам (мелкий scatter) --------------- */
+
+  _detailGrass(c, rng, x, y) {
+    const r = rng();
+    if (r < 0.55) {           // пучок травы
+      c.strokeStyle = 'rgba(34,84,24,0.55)';
+      c.lineWidth = 1.5;
+      for (let b = -1; b <= 1; b++) {
+        c.beginPath(); c.moveTo(x, y);
+        c.lineTo(x + b * 2.2 + (rng() - 0.5) * 2, y - 3.5 - rng() * 3.5); c.stroke();
+      }
+    } else if (r < 0.68) {    // цветочек
+      c.fillStyle = ['#ffd23f', '#ff8fb2', '#ffffff'][(rng() * 3) | 0];
+      c.beginPath(); c.arc(x, y, 1.7, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,0.8)';
+      c.beginPath(); c.arc(x - 0.5, y - 0.5, 0.7, 0, Math.PI * 2); c.fill();
+    } else if (r < 0.85) {    // камешек
+      c.fillStyle = 'rgba(90,95,105,0.5)';
+      c.beginPath(); c.ellipse(x, y, 2 + rng() * 1.6, 1.4 + rng(), 0, 0, Math.PI * 2); c.fill();
+    } else {                  // пятно вытоптанной земли
+      c.fillStyle = 'rgba(122,94,52,0.13)';
+      c.beginPath(); c.ellipse(x, y, 5 + rng() * 6, 3 + rng() * 4, rng() * 3, 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  _detailDesert(c, rng, x, y) {
+    const r = rng();
+    if (r < 0.4) {            // дуга дюны
+      c.strokeStyle = 'rgba(146,108,52,0.4)';
+      c.lineWidth = 1.6;
+      c.beginPath(); c.arc(x, y, 4 + rng() * 6, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
+    } else if (r < 0.7) {     // галька
+      c.fillStyle = 'rgba(120,84,40,0.45)';
+      c.beginPath(); c.arc(x, y, 0.9 + rng() * 1.5, 0, Math.PI * 2); c.fill();
+    } else if (r < 0.85) {    // сухая веточка
+      c.strokeStyle = 'rgba(110,80,44,0.6)';
+      c.lineWidth = 1.3;
+      c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x + 3, y - 2);
+      c.moveTo(x, y - 1); c.lineTo(x + 1.5, y - 4); c.stroke();
+    } else {                  // тёмное пятно песка
+      c.fillStyle = 'rgba(150,104,48,0.15)';
+      c.beginPath(); c.ellipse(x, y, 6 + rng() * 7, 3 + rng() * 4, rng() * 3, 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  _detailLava(c, rng, x, y) {
+    const r = rng();
+    if (r < 0.45) {           // трещина в корке
+      c.strokeStyle = 'rgba(10,6,8,0.65)';
+      c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(x - 4, y);
+      c.lineTo(x - 1, y + (rng() - 0.5) * 4); c.lineTo(x + 2, y + (rng() - 0.5) * 4);
+      c.lineTo(x + 5, y + (rng() - 0.5) * 3); c.stroke();
+      if (rng() < 0.4) {      // тлеющая искра в трещине
+        c.fillStyle = 'rgba(255,122,26,0.75)';
+        c.beginPath(); c.arc(x, y, 1.1, 0, Math.PI * 2); c.fill();
+      }
+    } else if (r < 0.75) {    // пепельное пятно
+      c.fillStyle = 'rgba(0,0,0,0.28)';
+      c.beginPath(); c.ellipse(x, y, 4 + rng() * 6, 2.5 + rng() * 4, rng() * 3, 0, Math.PI * 2); c.fill();
+    } else {                  // обсидиановый осколок
+      c.fillStyle = 'rgba(16,14,22,0.8)';
+      c.beginPath();
+      c.moveTo(x - 2.4, y + 1.8); c.lineTo(x - 0.6, y - 2.6); c.lineTo(x + 2.2, y + 0.6);
+      c.closePath(); c.fill();
+    }
+  }
+
+  _detailCity(c, rng, x, y) {
+    const r = rng();
+    if (r < 0.4) {            // пятно на асфальте
+      c.fillStyle = 'rgba(20,24,32,0.20)';
+      c.beginPath(); c.ellipse(x, y, 4 + rng() * 7, 2.5 + rng() * 4, rng() * 3, 0, Math.PI * 2); c.fill();
+    } else if (r < 0.65) {    // трещина
+      c.strokeStyle = 'rgba(28,32,40,0.5)';
+      c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(x - 3.5, y + (rng() - 0.5) * 3);
+      c.lineTo(x, y + (rng() - 0.5) * 3); c.lineTo(x + 3.5, y + (rng() - 0.5) * 3); c.stroke();
+    } else if (r < 0.82) {    // крошка/мусор
+      c.fillStyle = 'rgba(255,255,255,0.13)';
+      c.fillRect(x, y, 1.8, 1.8);
+    } else {                  // след краски
+      c.fillStyle = 'rgba(255,210,63,0.20)';
+      c.fillRect(x - 3, y, 6, 1.8);
+    }
   }
 
   _drawZone(c, z) {
@@ -257,32 +376,40 @@ export class RenderSystem {
       c.stroke();
     };
 
-    // тень под дорогой
+    // дорога «врезана» в землю: тёмная кайма + углубление, без приподнятости
+    trace(CELL * 1.0, pal.pathEdge);                    // тёмная обочина
+    trace(CELL * 0.88, shade(pal.path, -0.10));         // край полотна темнее
+    trace(CELL * 0.62, pal.path);                       // середина светлее
+    trace(CELL * 0.30, shade(pal.path, 0.10));          // вытертая колея по центру
+
+    // поперечные следы протектора/шагов по полотну
     c.save();
-    c.translate(0, 3);
-    trace(CELL * 0.96, 'rgba(0,0,0,0.16)');
+    c.strokeStyle = 'rgba(60,38,18,0.13)';
+    c.lineWidth = 3;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      for (let d = 10; d < len; d += 15) {
+        const t = d / len, x = a.x + dx * t, y = a.y + dy * t;
+        c.beginPath();
+        c.moveTo(x - nx * CELL * 0.3, y - ny * CELL * 0.3);
+        c.lineTo(x + nx * CELL * 0.3, y + ny * CELL * 0.3);
+        c.stroke();
+      }
+    }
     c.restore();
 
-    trace(CELL * 0.94, pal.pathEdge);     // обочина
-    trace(CELL * 0.8, pal.path);          // полотно
-    // светлая кромка по верхней стороне — дорога «поднята» над землёй
-    c.save();
-    c.translate(0, -CELL * 0.36);
-    c.globalAlpha = 0.20;
-    trace(2, '#ffffff');
-    c.restore();
-    // пунктирная центральная линия — читаемая разметка маршрута
-    c.save();
-    c.setLineDash([12, 16]);
-    c.globalAlpha = 0.28;
-    trace(3, '#ffffff');
-    c.setLineDash([]);
-    c.restore()
-    // колеи
-    c.save();
-    c.globalAlpha = 0.16;
-    trace(2.5, '#000');
-    c.restore();
+    // разметка — только асфальт города
+    if (g.biome === 'city') {
+      c.save();
+      c.setLineDash([12, 16]);
+      c.globalAlpha = 0.35;
+      trace(3, '#f5f7fa');
+      c.setLineDash([]);
+      c.restore();
+    }
 
     // камешки/пыль на полотне
     const rng = makeRng((g.def.seed || 3) + 555);
@@ -363,6 +490,39 @@ export class RenderSystem {
     c.strokeStyle = '#1b2130';
     roundRectPath(c, -CELL * 0.55, -CELL * 0.42, CELL * 0.78, CELL * 0.84, 6);
     c.stroke();
+    // каменная арка портала: два столба + перемычка (своя «крепость», не тоннель)
+    const stone = '#9097a3', stoneDark = '#6d7480';
+    for (const px of [-CELL * 0.66, CELL * 0.30]) {
+      c.fillStyle = stoneDark;
+      roundRectPath(c, px - 2, -CELL * 0.52 - 2, CELL * 0.20 + 4, CELL * 1.04 + 4, 4);
+      c.fill();
+      c.fillStyle = stone;
+      roundRectPath(c, px, -CELL * 0.52, CELL * 0.20, CELL * 1.04, 4);
+      c.fill();
+      c.strokeStyle = 'rgba(0,0,0,0.35)';
+      c.lineWidth = 1.4;
+      for (let k = 1; k <= 3; k++) {
+        c.beginPath();
+        c.moveTo(px, -CELL * 0.52 + k * CELL * 0.26);
+        c.lineTo(px + CELL * 0.20, -CELL * 0.52 + k * CELL * 0.26);
+        c.stroke();
+      }
+    }
+    // перемычка
+    c.fillStyle = stoneDark;
+    roundRectPath(c, -CELL * 0.70 - 2, -CELL * 0.66 - 2, CELL * 1.24 + 4, CELL * 0.20 + 4, 5);
+    c.fill();
+    c.fillStyle = shade(stone, 0.12);
+    roundRectPath(c, -CELL * 0.70, -CELL * 0.66, CELL * 1.24, CELL * 0.20, 5);
+    c.fill();
+    // красный вымпел на перемычке
+    c.fillStyle = '#d63b2f';
+    c.beginPath();
+    c.moveTo(-CELL * 0.10, -CELL * 0.56);
+    c.lineTo(CELL * 0.14, -CELL * 0.50);
+    c.lineTo(-CELL * 0.10, -CELL * 0.42);
+    c.closePath();
+    c.fill();
     // красный маркер «отсюда идут»
     c.fillStyle = 'rgba(255,90,90,0.85)';
     c.beginPath();

@@ -207,7 +207,18 @@ export class Tower {
     g.save();
     g.translate(this.x, this.y + lift);
 
-    // плита
+    // боковина фундамента: башня стоит на платформе, а не лежит плашмя
+    g.save();
+    g.globalAlpha = clamp(grow * 2, 0, 1);
+    g.fillStyle = '#4c545f';
+    g.beginPath(); g.ellipse(0, 8 * s, 20 * s, 8.5 * s, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#39404a';
+    g.beginPath(); g.ellipse(0, 10 * s, 18 * s, 7 * s, 0, 0, Math.PI * 2); g.fill();
+    g.restore();
+
+    // плита поднята над фундаментом
+    g.save();
+    g.translate(0, -3.5 * s);
     g.globalAlpha = clamp(grow * 2, 0, 1);
     Sprites.draw(g, `tower.base.${this.level - 1}`, 0, 0, { scale: s });
     g.globalAlpha = 1;
@@ -223,7 +234,9 @@ export class Tower {
       const ts = s * 1.12;   // турель чуть крупнее плиты — «мультяшная» масса
       g.drawImage(img, -px * ts, -py * ts, img.width * ts, img.height * ts);
       g.restore();
+
     }
+    g.restore();
 
     // подсветка уровня 3 (золотое «дыхание»)
     if (this.level === 3) {
