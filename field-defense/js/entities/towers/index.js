@@ -14,6 +14,8 @@ import './FlameTower.js';
 import './LaserTower.js';
 import './HiveTower.js';
 import './NukeTower.js';
+import './LinkTower.js';
+import './PowerTower.js';
 
 /** Создать башню по определению из TOWER_DEFS */
 export function createTower(game, def, cx, cy) {

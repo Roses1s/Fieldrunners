@@ -146,6 +146,29 @@ export const TOWER_DEFS = {
     damageType: DAMAGE_TYPE.ENERGY, targets: 'both', behavior: 'laser',
     color: '#7a4fa8', accent: '#ff5ad1', arc: Math.PI * 2, turnSpeed: 8, sfx: 'laser'
   },
+  link: {
+    id: 'link', name: 'Связка', en: 'Link',
+    desc: 'Работает в паре: между двумя башнями — луч, сжигающий всех на линии.',
+    unlock: 6, cost: 45, upCost: [35, 35],
+    // урон задан за тик 0.1 с: dps = dmg × 10
+    dmg: [26, 52, 90], rate: [10, 10, 10],
+    range: [R(3.0), R(3.4), R(3.8)],
+    dps: [260, 520, 900],
+    damageType: DAMAGE_TYPE.ENERGY, targets: 'both', behavior: 'link',
+    color: '#3f7fbf', accent: '#7ce0ff', arc: Math.PI * 2, turnSpeed: 4, sfx: 'laser'
+  },
+  power: {
+    id: 'power', name: 'Усилитель', en: 'Power',
+    desc: 'Не стреляет. Усиливает урон и радиус соседних башен.',
+    unlock: 9, cost: 65, upCost: [80, 80],
+    dmg: [0, 0, 0], rate: [1, 1, 1],
+    range: [R(2.0), R(2.3), R(2.6)],
+    dps: [0, 0, 0],
+    buffDmg: [0.15, 0.25, 0.40],
+    buffRange: [0.08, 0.12, 0.18],
+    damageType: DAMAGE_TYPE.ENERGY, targets: 'ground', behavior: 'power',
+    color: '#7a5aa8', accent: '#c9a6ff', arc: Math.PI * 2, turnSpeed: 2, sfx: 'ui'
+  },
   hive: {
     id: 'hive', name: 'Улей', en: 'Hive',
     desc: 'Рой пчёл: групповой урон по площади, достает воздушные цели.',
@@ -175,7 +198,7 @@ export const TOWER_DEFS = {
 };
 
 /** Порядок башен в радиальном меню (только доступные на карте) */
-export const BUILD_ORDER = ['gatling', 'glue', 'missile', 'tesla', 'flame', 'laser', 'hive', 'nuke'];
+export const BUILD_ORDER = ['gatling', 'glue', 'missile', 'tesla', 'flame', 'laser', 'link', 'hive', 'power', 'nuke'];
 
 /** Башни, доступные в прототипе (Шаги 1–7) */
 export const PROTOTYPE_TOWERS = ['gatling', 'glue', 'missile', 'tesla'];

@@ -362,7 +362,15 @@ const CONFIG = {
 // Ключ localStorage
 const SAVE_KEY = 'field-defense-save-v1';
 
-void { CELL, TILE, CONFIG, TARGET_MODE, TARGET_MODES, DAMAGE_TYPE, SAVE_KEY };
+/** Сложности карты: HP врагов и награды (очки растут вместе с наградой за убийства) */
+const DIFFICULTIES = {
+  casual: { id: 'casual', name: 'Лёгкая', hpMul: 0.85, rewardMul: 0.85 },
+  tough: { id: 'tough', name: 'Тяжёлая', hpMul: 1.0, rewardMul: 1.0 },
+  heroic: { id: 'heroic', name: 'Героическая', hpMul: 1.30, rewardMul: 1.30 }
+};
+const DIFFICULTY_ORDER = ['casual', 'tough', 'heroic'];
+
+void { CELL, TILE, CONFIG, TARGET_MODE, TARGET_MODES, DAMAGE_TYPE, SAVE_KEY, DIFFICULTIES, DIFFICULTY_ORDER };
 
 
 /* ==== js/utils/MathUtil.js ==== */
@@ -1631,6 +1639,71 @@ for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.laser.${lvl}`, () => buildLaserTurret(lvl));
   reg(`tower.hive.${lvl}`, () => buildHiveTurret(lvl));
   reg(`tower.nuke.${lvl}`, () => buildNukeTurret(lvl));
+  reg(`tower.link.${lvl}`, () => buildLinkTurret(lvl));
+  reg(`tower.power.${lvl}`, () => buildPowerTurret(lvl));
+}
+
+
+/** Связка: два рога излучателя и шар плазмы между ними */
+function buildLinkTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 3;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#dfe7f2' : '#9aa3b5');
+
+  // корпус-генератор
+  fillRR(g, 10, cy - 8, 22, 17, 5, vgrad(g, 10, cy - 8, 22, 17, '#4a7fbc', '#274a75'), 2.2);
+  g.strokeStyle = 'rgba(124,224,255,0.55)'; g.lineWidth = 1.6;
+  for (let i = 0; i < 3; i++) {
+    g.beginPath(); g.moveTo(13 + i * 6, cy - 5); g.lineTo(13 + i * 6, cy + 6); g.stroke();
+  }
+  // два рога вперёд
+  g.strokeStyle = trim; g.lineWidth = 3.2; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(30, cy - 5); g.quadraticCurveTo(40, cy - 9, 45, cy - 12);
+  g.moveTo(30, cy + 5); g.quadraticCurveTo(40, cy + 9, 45, cy + 12);
+  g.stroke();
+  circle(g, 45, cy - 12, 2.6, '#aee6ff', 1.4, trim);
+  circle(g, 45, cy + 12, 2.6, '#aee6ff', 1.4, trim);
+  // шар плазмы между рогами
+  const lg = g.createRadialGradient(47, cy, 0.5, 47, cy, 8 + level * 1.6);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#7ce0ff');
+  lg.addColorStop(1, 'rgba(124,224,255,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(47, cy, 8 + level * 1.6, 0, Math.PI * 2); g.fill();
+  circle(g, 47, cy, 3 + level * 0.5, '#eaf9ff', 1.4, '#39b6ff');
+  return c;
+}
+
+/** Усилитель: пилон с кольцами-излучателями ауры */
+function buildPowerTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 4;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#d9c8ff' : '#a68fd0');
+
+  // основание
+  fillRR(g, 10, cy - 7, 24, 15, 5, vgrad(g, 10, cy - 7, 24, 15, '#6a4f9e', '#3d2a63'), 2.2);
+  // пилон
+  fillRR(g, 24, cy - 20, 6, 22, 3, vgrad(g, 24, cy - 20, 6, 22, '#8a6fc0', '#4d3a75'), 1.8);
+  // кольца ауры (число растёт с уровнем)
+  g.strokeStyle = trim; g.lineWidth = 2;
+  for (let i = 0; i < 1 + level; i++) {
+    const ry = cy - 16 + i * 6;
+    g.beginPath(); g.ellipse(27, ry, 8.5 - i * 1.2, 3.2, 0, 0, Math.PI * 2); g.stroke();
+  }
+  // ядро
+  const lg = g.createRadialGradient(27, cy - 21, 0.5, 27, cy - 21, 8 + level * 1.5);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c9a6ff');
+  lg.addColorStop(1, 'rgba(201,166,255,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(27, cy - 21, 8 + level * 1.5, 0, Math.PI * 2); g.fill();
+  circle(g, 27, cy - 21, 3.2 + level * 0.5, '#efe6ff', 1.4, trim);
+  // индикаторные диоды на основании
+  for (let i = 0; i < 3; i++) circle(g, 15 + i * 7, cy + 3, 1.5, i <= level ? '#c9a6ff' : '#4a3a6e');
+  return c;
 }
 
 // Враги
@@ -2510,6 +2583,29 @@ const TOWER_DEFS = {
     damageType: DAMAGE_TYPE.ENERGY, targets: 'both', behavior: 'laser',
     color: '#7a4fa8', accent: '#ff5ad1', arc: Math.PI * 2, turnSpeed: 8, sfx: 'laser'
   },
+  link: {
+    id: 'link', name: 'Связка', en: 'Link',
+    desc: 'Работает в паре: между двумя башнями — луч, сжигающий всех на линии.',
+    unlock: 6, cost: 45, upCost: [35, 35],
+    // урон задан за тик 0.1 с: dps = dmg × 10
+    dmg: [26, 52, 90], rate: [10, 10, 10],
+    range: [R(3.0), R(3.4), R(3.8)],
+    dps: [260, 520, 900],
+    damageType: DAMAGE_TYPE.ENERGY, targets: 'both', behavior: 'link',
+    color: '#3f7fbf', accent: '#7ce0ff', arc: Math.PI * 2, turnSpeed: 4, sfx: 'laser'
+  },
+  power: {
+    id: 'power', name: 'Усилитель', en: 'Power',
+    desc: 'Не стреляет. Усиливает урон и радиус соседних башен.',
+    unlock: 9, cost: 65, upCost: [80, 80],
+    dmg: [0, 0, 0], rate: [1, 1, 1],
+    range: [R(2.0), R(2.3), R(2.6)],
+    dps: [0, 0, 0],
+    buffDmg: [0.15, 0.25, 0.40],
+    buffRange: [0.08, 0.12, 0.18],
+    damageType: DAMAGE_TYPE.ENERGY, targets: 'ground', behavior: 'power',
+    color: '#7a5aa8', accent: '#c9a6ff', arc: Math.PI * 2, turnSpeed: 2, sfx: 'ui'
+  },
   hive: {
     id: 'hive', name: 'Улей', en: 'Hive',
     desc: 'Рой пчёл: групповой урон по площади, достает воздушные цели.',
@@ -2539,7 +2635,7 @@ const TOWER_DEFS = {
 };
 
 /** Порядок башен в радиальном меню (только доступные на карте) */
-const BUILD_ORDER = ['gatling', 'glue', 'missile', 'tesla', 'flame', 'laser', 'hive', 'nuke'];
+const BUILD_ORDER = ['gatling', 'glue', 'missile', 'tesla', 'flame', 'laser', 'link', 'hive', 'power', 'nuke'];
 
 /** Башни, доступные в прототипе (Шаги 1–7) */
 const PROTOTYPE_TOWERS = ['gatling', 'glue', 'missile', 'tesla'];
@@ -3819,6 +3915,13 @@ class Tower {
     this.damage = d.dmg[i];
     this.rate = d.rate[i];
     this.range = d.range[i];
+    // базовые значения без баффов Усилителя: GameScene.refreshTowerBuffs()
+    // каждый кадр пересчитывает damage/range от этих чисел, поэтому бафф
+    // не может «накапливаться» при повторных пересчётах
+    this.baseDamage = this.damage;
+    this.baseRange = this.range;
+    this.buffDmgMul = 1;
+    this.buffRangeMul = 1;
     this.interval = 1 / Math.max(0.01, this.rate);
     this.splash = d.splash ? d.splash[i] : 0;
     this.slow = d.slow ? d.slow[i] : 0;
@@ -4851,6 +4954,234 @@ class NukeTower extends Tower {
 
 registerTower('nuke', NukeTower);
 void NukeTower;
+
+
+/* ==== js/entities/towers/LinkTower.js ==== */
+/* ==========================================================================
+   LinkTower.js — «Связка» ($45, апгрейд $35).
+
+   Работает только в паре: ищет ближайшую вторую Связку в радиусе связи
+   (3.0/3.4/3.8 тайла) и натягивает между ними энергетический луч.
+   Луч бьёт непрерывно (10 тиков в секунду) по всем, кто оказался на линии —
+   260/520/900 DPS на пару. В одиночку башня бесполезна, зато пара перекрывает
+   коридор лучше любой турели. Достаёт и наземных, и воздушных.
+   ========================================================================== */
+
+
+const TICK = 0.1;            // период тика луча, с
+const BEAM_HALF = 7;         // половина толщины луча, px
+
+class LinkTower extends Tower {
+  constructor(game, def, cx, cy) {
+    super(game, def, cx, cy);
+    this.partner = null;     // вторая башня пары
+    this.linkActive = false; // луч натянут (пара взаимная)
+    this.tickT = 0;
+  }
+
+  get turretPivot() { return [27, 27]; }
+
+  /** Точка, откуда выходит луч (шар между рогами излучателя) */
+  emitterOf(t) { return { x: t.x, y: t.y - 20 }; }
+
+  /** Ближайшая другая Связка в радиусе связи */
+  findPartner() {
+    const towers = this.game.towers || [];
+    let best = null, bestD = Infinity;
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      if (t === this || t.def.behavior !== 'link' || t.buildAnim > 0.55) continue;
+      const d = dist(this.x, this.y, t.x, t.y);
+      const maxD = Math.min(this.range, t.range);
+      if (d <= maxD && d < bestD) { bestD = d; best = t; }
+    }
+    return best;
+  }
+
+  /** Эта башня — «ведущая» в паре (чтобы луч не бил дважды) */
+  isPrimary() {
+    if (!this.partner) return false;
+    const cols = this.game.grid ? this.game.grid.cols : 100;
+    return (this.cy * cols + this.cx) < (this.partner.cy * cols + this.partner.cx);
+  }
+
+  update(dt) {
+    // собственный цикл вместо базового: у Связки нет «выстрела» по цели
+    this.timeAlive += dt;
+    this.pulse += dt;
+    if (this.buildAnim > 0) this.buildAnim = Math.max(0, this.buildAnim - dt / 0.45);
+    if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 14);
+    if (this.firing > 0) this.firing = Math.max(0, this.firing - dt * 6);
+    this.target = null;
+
+    this.partner = this.findPartner();
+    this.linkActive = !!this.partner &&
+      this.partner.findPartner() === this &&
+      this.buildAnim < 0.55;
+
+    if (this.linkActive && this.isPrimary()) {
+      this.tickT -= dt;
+      while (this.tickT <= 0) {
+        this.tickT += TICK;
+        this.applyBeamDamage();
+      }
+      this.firing = 1;
+    } else {
+      this.tickT = 0;
+    }
+  }
+
+  /** Урон всем, кто стоит на линии луча (тик 0.1 с) */
+  applyBeamDamage() {
+    const g = this.game;
+    const a = this.emitterOf(this);
+    const b = this.emitterOf(this.partner);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const radius = dist(a.x, a.y, b.x, b.y) / 2 + 30;
+    const list = g.collision.queryCircle(mx, my, radius, !this.canTargetAir);
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (!this.canTarget(e)) continue;
+      if (distToSegment(e.x, e.y, a.x, a.y, b.x, b.y) > BEAM_HALF + e.radius) continue;
+      g.damageEnemy(e, this.damage, this.def.damageType, { pierceArmor: 0.25, source: this });
+      if (Math.random() < 0.35) {
+        g.particles.burst(e.x, e.y, {
+          count: 2, colors: ['#ffffff', '#7ce0ff'],
+          speed: [25, 80], life: [0.1, 0.22], size: [0.8, 1.8], type: PT.SPARK, drag: 4
+        });
+      }
+    }
+  }
+
+  fire() { /* луч работает в update(), одиночных выстрелов нет */ }
+
+  render(g, time) {
+    super.render(g, time);
+
+    // натянутый луч рисует только ведущая башня пары
+    if (this.linkActive && this.partner && this.isPrimary()) {
+      const a = this.emitterOf(this);
+      const b = this.emitterOf(this.partner);
+      const flick = 0.82 + 0.18 * Math.sin(time * 41 + this.cx);
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      g.lineCap = 'round';
+      g.globalAlpha = 0.28 * flick;
+      g.strokeStyle = '#39b6ff';
+      g.lineWidth = 8;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.globalAlpha = 0.75 * flick;
+      g.strokeStyle = '#aee6ff';
+      g.lineWidth = 3;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.globalAlpha = 0.95;
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.restore();
+    } else if (!this.linkActive) {
+      // одиночная Связка: предупреждающий пунктир «нужна пара»
+      g.save();
+      g.globalAlpha = 0.35 + 0.15 * Math.sin(this.pulse * 3);
+      g.strokeStyle = '#7ce0ff';
+      g.lineWidth = 1.6;
+      g.setLineDash([4, 5]);
+      g.beginPath(); g.arc(this.x, this.y - 20, 7, 0, Math.PI * 2); g.stroke();
+      g.setLineDash([]);
+      g.restore();
+    }
+  }
+
+  renderRange(g, color, fill) {
+    super.renderRange(g, color || 'rgba(124,224,255,0.85)', fill || 'rgba(124,224,255,0.08)');
+    // радиус связи: внутри него вторая Связка образует пару
+    if (this.partner) {
+      const a = this.emitterOf(this);
+      const b = this.emitterOf(this.partner);
+      g.save();
+      g.setLineDash([6, 5]);
+      g.strokeStyle = 'rgba(174,230,255,0.8)';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      g.setLineDash([]);
+      g.restore();
+    }
+  }
+}
+
+registerTower('link', LinkTower);
+void LinkTower;
+
+
+/* ==== js/entities/towers/PowerTower.js ==== */
+/* ==========================================================================
+   PowerTower.js — «Усилитель» ($65, апгрейд $80).
+
+   Не стреляет вообще. Излучает ауру (2.0/2.3/2.6 тайла), внутри которой
+   соседние башни получают +15/25/40% к урону и +8/12/18% к радиусу.
+   Бафф пересчитывает GameScene.refreshTowerBuffs() от базовых значений,
+   поэтому он не накапливается и мгновенно пропадает при продаже Усилителя.
+   Усилители не усиливают друг друга.
+   ========================================================================== */
+
+
+class PowerTower extends Tower {
+  constructor(game, def, cx, cy) {
+    super(game, def, cx, cy);
+    this.buffDmgVal = 0;
+    this.buffRangeVal = 0;
+    this.applyLevel();
+  }
+
+  get turretPivot() { return [26, 27]; }
+
+  applyLevel() {
+    super.applyLevel();
+    const i = this.level - 1;
+    this.buffDmgVal = this.def.buffDmg ? this.def.buffDmg[i] : 0;
+    this.buffRangeVal = this.def.buffRange ? this.def.buffRange[i] : 0;
+  }
+
+  update(dt) {
+    // только «дыхание» и анимация постройки: целей и выстрелов нет
+    this.timeAlive += dt;
+    this.pulse += dt;
+    if (this.buildAnim > 0) this.buildAnim = Math.max(0, this.buildAnim - dt / 0.45);
+    this.target = null;
+    this.angle += dt * 0.5;   // излучатель медленно поворачивается
+  }
+
+  fire() { /* не стреляет */ }
+
+  render(g, time) {
+    super.render(g, time);
+    // мягкая пульсирующая аура (подсказка радиуса без выделения башни)
+    const r = this.baseRange * (0.985 + 0.015 * Math.sin(this.pulse * 2));
+    g.save();
+    g.globalAlpha = 0.05 + 0.02 * Math.sin(this.pulse * 2);
+    g.fillStyle = '#c9a6ff';
+    g.beginPath(); g.arc(this.x, this.y, r, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 0.16;
+    g.strokeStyle = '#c9a6ff';
+    g.lineWidth = 1.4;
+    g.beginPath(); g.arc(this.x, this.y, r, 0, Math.PI * 2); g.stroke();
+    g.restore();
+    void time;
+  }
+
+  renderRange(g, color, fill) {
+    super.renderRange(g, color || 'rgba(201,166,255,0.85)', fill || 'rgba(201,166,255,0.08)');
+    g.save();
+    g.fillStyle = 'rgba(230,216,255,0.95)';
+    g.font = '700 11px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.fillText(`аура: +${Math.round(this.buffDmgVal * 100)}% урона`, this.x, this.y - 36);
+    g.restore();
+  }
+}
+
+registerTower('power', PowerTower);
+void PowerTower;
 
 
 /* ==== js/entities/towers/index.js ==== */
@@ -6986,6 +7317,7 @@ class EconomySystem {
     this.earned = 0;         // всего заработано за бой
     this.spent = 0;          // всего потрачено
     this.score = 0;
+    this.rewardMul = 1;      // множитель награды от сложности карты
     this.combo = 0;          // серия убийств без протечек
     this.comboTimer = 0;
     this.pulse = 0;          // анимация изменения баланса (для HUD)
@@ -7024,7 +7356,7 @@ class EconomySystem {
     this.combo++;
     this.comboTimer = 3;
     const comboBonus = 1 + Math.min(this.combo, 50) * 0.01;
-    const total = Math.max(1, Math.round(base * waveBonus * comboBonus));
+    const total = Math.max(1, Math.round(base * waveBonus * comboBonus * this.rewardMul));
     this.add(total, { float: true, x, y });
     this.score += total * 10 + (def.isBoss ? 500 : 0);
     return total;
@@ -8686,8 +9018,11 @@ class GameHud {
     const n = defs.length;
     if (!n) return;
 
-    const r = clamp(Math.min(this.viewW, this.viewH) * 0.19, 62, 92);
     const iconR = TOUCH / 2;
+    // радиус растём вместе с числом башен: соседние иконки не должны слипаться
+    // (при 10 башнях нужен r ≈ 94, иначе круги 48px начнут перекрываться)
+    const spreadR = n > 1 ? Math.ceil((iconR + 5) / Math.sin(Math.PI / n)) : 62;
+    const r = clamp(Math.max(Math.min(this.viewW, this.viewH) * 0.19, spreadR), 62, 118);
 
     // центр меню не должен вылезать за экран
     const mx = clamp(sx, r + iconR + 6, this.viewW - r - iconR - 6);
@@ -9536,6 +9871,8 @@ class MapSelectScene extends Scene {
     this.pressed = null;
     this.buttons = {};
     this.anim = 0;
+    this.difficulty = DIFFICULTIES[game.save?.settings?.difficulty] ? game.save.settings.difficulty : 'tough';
+    this.diffBtns = [];
   }
 
   enter() {
@@ -9589,6 +9926,16 @@ class MapSelectScene extends Scene {
       x: w / 2 + 8, y: h - s.bottom - 58, w: 122, h: 48,
       label: 'БЕСКОНЕЧНО', icon: 'icon.wave'
     };
+    // ряд сложности: три кнопки над запуском
+    const dbw = 86, dbh = 34, dgap = 8;
+    const dTotal = dbw * 3 + dgap * 2;
+    this.diffBtns = DIFFICULTY_ORDER.map((key, i) => ({
+      key,
+      x: w / 2 - dTotal / 2 + i * (dbw + dgap),
+      y: h - s.bottom - 58 - dbh - 10,
+      w: dbw, h: dbh,
+      label: DIFFICULTIES[key].name
+    }));
     this.selected = clamp(this.selected ?? 0, 0, MAP_ORDER.length - 1);
   }
 
@@ -9686,6 +10033,12 @@ class MapSelectScene extends Scene {
     this.endlessBtn.sub = this.endlessBtn.enabled ? '' : 'нужна 1 звезда';
     Draw.button(g, Object.assign(this.playBtn, { pressed: this.pressed === 'play' }));
     Draw.button(g, Object.assign(this.endlessBtn, { pressed: this.pressed === 'endless' }));
+    for (const b of this.diffBtns) {
+      Draw.button(g, Object.assign({}, b, {
+        accent: b.key === this.difficulty,
+        pressed: this.pressed === 'diff:' + b.key
+      }));
+    }
 
     Draw.roundButton(g, Object.assign(this.buttons.back, { pressed: this.pressed === 'back' }));
   }
@@ -9763,6 +10116,14 @@ class MapSelectScene extends Scene {
       this.game.replaceScene(new MenuScene(this.game));
       return;
     }
+    for (const b of this.diffBtns) {
+      if (hit(b, x, y)) {
+        this.difficulty = b.key;
+        this.game.save?.setSetting?.('difficulty', b.key);
+        this.game.audio?.play('ui');
+        return;
+      }
+    }
     if (hit(this.playBtn, x, y)) { this._start(false); return; }
     if (hit(this.endlessBtn, x, y)) { this._start(true); return; }
 
@@ -9794,7 +10155,7 @@ class MapSelectScene extends Scene {
       return;
     }
     this.game.audio?.play('build');
-    this.game.replaceScene(new GameScene(this.game, { mapId: id, endless }));
+    this.game.replaceScene(new GameScene(this.game, { mapId: id, endless, difficulty: this.difficulty }));
   }
 
   _centerOn(i, instant = false) {
@@ -9805,10 +10166,12 @@ class MapSelectScene extends Scene {
   }
 
   onDown(x, y) {
+    const diffHit = this.diffBtns.find((b) => hit(b, x, y));
     this.pressed =
       hit(this.buttons.back, x, y) ? 'back'
         : hit(this.playBtn, x, y) ? 'play'
-          : hit(this.endlessBtn, x, y) ? 'endless' : null;
+          : hit(this.endlessBtn, x, y) ? 'endless'
+            : diffHit ? 'diff:' + diffHit.key : null;
     this.dragging = true;
     this.dragX = x;
     this.vel = 0;
@@ -10317,6 +10680,11 @@ class GameScene extends Scene {
     this.buildMode = false;
     this.lastBuiltId = 'gatling';
 
+    // ---- сложность карты (Лёгкая/Тяжёлая/Героическая) ----
+    this.difficultyKey = DIFFICULTIES[this.params.difficulty] ? this.params.difficulty : 'tough';
+    this.difficulty = DIFFICULTIES[this.difficultyKey];
+    this.economy.rewardMul = this.difficulty.rewardMul;
+
     // ---- прогрессия ----
     this.hpScale = CONFIG.HP_SCALE_PER_WAVE * (this.mapDef.hpScale || 1);
     this.armorScale = CONFIG.ARMOR_SCALE_PER_WAVE;
@@ -10429,6 +10797,7 @@ class GameScene extends Scene {
 
     // 2) башни: прицеливание и выстрелы
     const towers = this.towers;
+    this.refreshTowerBuffs();
     for (let i = 0; i < towers.length; i++) towers[i].update(dt);
 
     // 3) враги: движение и статусы
@@ -10528,7 +10897,8 @@ class GameScene extends Scene {
   spawnEnemy(p) {
     const def = ENEMY_DEFS[p.type] || ENEMY_DEFS.soldier;
     const e = createEnemy(this, def, p.entry | 0, p.wave || this.waves.wave, {
-      hpMul: p.hpMul, armorMul: p.armorMul, speedMul: p.speedMul, isBoss: p.isBoss
+      hpMul: (p.hpMul ?? 1) * this.difficulty.hpMul,
+      armorMul: p.armorMul, speedMul: p.speedMul, isBoss: p.isBoss
     });
     this.enemies.push(e);
     if (p.isBoss || def.isBoss) {
@@ -10741,6 +11111,40 @@ class GameScene extends Scene {
     this.texts.spawn(this.worldW / 2, this.worldH / 2 + 16, `ВОЛНА ${wave} ОТБИТА  +$${bonus}`, '#6ee36e', 16, 1.6);
     this.audio?.play('upgrade');
     this.economy.score += 100 * wave;
+  }
+
+  /**
+   * Баффы Усилителей: damage/range каждой башни = база × лучший бафф из аур.
+   * Пересчёт от базовых значений каждый кадр, поэтому бафф не накапливается.
+   * Усилители не усиливают сами себя и друг друга (иначе ауры росли бы без предела).
+   */
+  refreshTowerBuffs() {
+    const towers = this.towers;
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      t.buffDmgMul = 1;
+      t.buffRangeMul = 1;
+    }
+    for (let i = 0; i < towers.length; i++) {
+      const p = towers[i];
+      if (p.def.behavior !== 'power') continue;
+      const aura = p.baseRange;
+      const bd = 1 + (p.buffDmgVal || 0);
+      const br = 1 + (p.buffRangeVal || 0);
+      for (let j = 0; j < towers.length; j++) {
+        const t = towers[j];
+        if (t === p || t.def.behavior === 'power') continue;
+        const dx = t.x - p.x, dy = t.y - p.y;
+        if (dx * dx + dy * dy > aura * aura) continue;
+        if (bd > t.buffDmgMul) t.buffDmgMul = bd;
+        if (br > t.buffRangeMul) t.buffRangeMul = br;
+      }
+    }
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      t.damage = t.baseDamage * t.buffDmgMul;
+      t.range = t.baseRange * t.buffRangeMul;
+    }
   }
 
   sendNextWave() {

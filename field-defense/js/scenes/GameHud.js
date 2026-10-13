@@ -94,8 +94,11 @@ export class GameHud {
     const n = defs.length;
     if (!n) return;
 
-    const r = clamp(Math.min(this.viewW, this.viewH) * 0.19, 62, 92);
     const iconR = TOUCH / 2;
+    // радиус растём вместе с числом башен: соседние иконки не должны слипаться
+    // (при 10 башнях нужен r ≈ 94, иначе круги 48px начнут перекрываться)
+    const spreadR = n > 1 ? Math.ceil((iconR + 5) / Math.sin(Math.PI / n)) : 62;
+    const r = clamp(Math.max(Math.min(this.viewW, this.viewH) * 0.19, spreadR), 62, 118);
 
     // центр меню не должен вылезать за экран
     const mx = clamp(sx, r + iconR + 6, this.viewW - r - iconR - 6);

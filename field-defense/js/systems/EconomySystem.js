@@ -19,6 +19,7 @@ export class EconomySystem {
     this.earned = 0;         // всего заработано за бой
     this.spent = 0;          // всего потрачено
     this.score = 0;
+    this.rewardMul = 1;      // множитель награды от сложности карты
     this.combo = 0;          // серия убийств без протечек
     this.comboTimer = 0;
     this.pulse = 0;          // анимация изменения баланса (для HUD)
@@ -57,7 +58,7 @@ export class EconomySystem {
     this.combo++;
     this.comboTimer = 3;
     const comboBonus = 1 + Math.min(this.combo, 50) * 0.01;
-    const total = Math.max(1, Math.round(base * waveBonus * comboBonus));
+    const total = Math.max(1, Math.round(base * waveBonus * comboBonus * this.rewardMul));
     this.add(total, { float: true, x, y });
     this.score += total * 10 + (def.isBoss ? 500 : 0);
     return total;

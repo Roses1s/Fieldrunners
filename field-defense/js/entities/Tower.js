@@ -59,6 +59,13 @@ export class Tower {
     this.damage = d.dmg[i];
     this.rate = d.rate[i];
     this.range = d.range[i];
+    // базовые значения без баффов Усилителя: GameScene.refreshTowerBuffs()
+    // каждый кадр пересчитывает damage/range от этих чисел, поэтому бафф
+    // не может «накапливаться» при повторных пересчётах
+    this.baseDamage = this.damage;
+    this.baseRange = this.range;
+    this.buffDmgMul = 1;
+    this.buffRangeMul = 1;
     this.interval = 1 / Math.max(0.01, this.rate);
     this.splash = d.splash ? d.splash[i] : 0;
     this.slow = d.slow ? d.slow[i] : 0;

@@ -42,7 +42,7 @@ single-file build        → http://0.0.0.0:8080/dist/index.html
 node build.mjs                   # или: npm run build
 ```
 
-На выходе `dist/index.html` — один самодостаточный файл (~393 КБ): CSS, весь код (54 модуля
+На выходе `dist/index.html` — один самодостаточный файл (~410 КБ): CSS, весь код (56 модулей
 склеены, `import`/`export` вырезаны), без единой внешней ссылки. Сборщик сам прогоняет
 `node --check` по результату и ругается, если что-то сломалось.
 
@@ -111,13 +111,13 @@ npx --yes serve dist      # локальная имитация статики
 сети нет, зависимостей нет.
 
 ```bash
-npm test                 # build + sim + render + boot + bundle (212 проверок)
+npm test                 # build + sim + render + boot + bundle (226 проверок)
 npm run test:all         # то же + баланс-бот (дольше всех)
 
-node tests/sim.mjs       # 99  — логика, включая новые башни и разблокировки
+node tests/sim.mjs       # 111 — логика, включая все башни, сложности и разблокировки
 node tests/render.mjs    # 61  — отрисовка, 109 процедурных спрайтов
 node tests/boot.mjs      # 35  — интеграция: загрузка, ввод, игровой цикл
-node tests/bundle.mjs    # 17  — собранный dist/index.html реально стартует
+node tests/bundle.mjs    # 19  — собранный dist/index.html реально стартует
 node tests/balance.mjs   # бот-автоигрок: 20 волн на всех 4 картах
 ```
 
@@ -140,7 +140,7 @@ node tests/balance.mjs
 ```
 
 Он за секунды проигрывает все 4 карты целиком и печатает итог (волна, жизни, протечки, DPS,
-звёзды, время). Ориентир последнего прогона: grasslands, desert и magma — 3 ★, city — 2 ★
+звёзды, время). Устойчивый ориентир: бот доводит до победы все 4 карты, обычно на 2–3 ★
 (у бота есть случайный выбор башен, поэтому протечки гуляют). Если бот проигрывает на 5-й волне — стало слишком тяжело; если держит
 20/20 жизней на всех картах без единого улучшения — слишком легко.
 
@@ -230,9 +230,9 @@ Math.pow(s.hpScale, s.waves.wave - 1)  // накопленный скейл HP (
 ```bash
 cd field-defense
 node -v                     # ≥ 18
-npm test                    # 212/212 ✔ (сначала сам пересобирает dist)
-node tests/balance.mjs      # все 4 карты: ПОБЕДА (в последнем прогоне 3★/3★/3★/2★)
-node build.mjs              # ✔ dist/index.html — ~393 КБ, 54 модуля
+npm test                    # 226/226 ✔ (сначала сам пересобирает dist)
+node tests/balance.mjs      # все 4 карты: ПОБЕДА (обычно 2–3 ★)
+node build.mjs              # ✔ dist/index.html — ~410 КБ, 56 модулей
 node tools/serve.mjs 8080   # → http://localhost:8080/
 ```
 

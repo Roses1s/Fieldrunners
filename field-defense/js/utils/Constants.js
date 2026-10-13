@@ -158,4 +158,12 @@ export const CONFIG = {
 // Ключ localStorage
 export const SAVE_KEY = 'field-defense-save-v1';
 
-export default { CELL, TILE, CONFIG, TARGET_MODE, TARGET_MODES, DAMAGE_TYPE, SAVE_KEY };
+/** Сложности карты: HP врагов и награды (очки растут вместе с наградой за убийства) */
+export const DIFFICULTIES = {
+  casual: { id: 'casual', name: 'Лёгкая', hpMul: 0.85, rewardMul: 0.85 },
+  tough: { id: 'tough', name: 'Тяжёлая', hpMul: 1.0, rewardMul: 1.0 },
+  heroic: { id: 'heroic', name: 'Героическая', hpMul: 1.30, rewardMul: 1.30 }
+};
+export const DIFFICULTY_ORDER = ['casual', 'tough', 'heroic'];
+
+export default { CELL, TILE, CONFIG, TARGET_MODE, TARGET_MODES, DAMAGE_TYPE, SAVE_KEY, DIFFICULTIES, DIFFICULTY_ORDER };

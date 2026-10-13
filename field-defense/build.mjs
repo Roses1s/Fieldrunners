@@ -41,6 +41,8 @@ const ORDER = [
   'js/entities/towers/LaserTower.js',
   'js/entities/towers/HiveTower.js',
   'js/entities/towers/NukeTower.js',
+  'js/entities/towers/LinkTower.js',
+  'js/entities/towers/PowerTower.js',
   'js/entities/towers/index.js',
   'js/entities/Enemy.js',
   'js/entities/enemies/Soldier.js',

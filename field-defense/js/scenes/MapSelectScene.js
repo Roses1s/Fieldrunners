@@ -10,7 +10,7 @@ import { MenuScene } from './MenuScene.js';
 import { Draw, hit } from '../utils/Draw.js';
 import { Sprites } from '../utils/SpriteSheet.js';
 import { MAP_ORDER, MAPS, getMap } from '../maps/MapData.js';
-import { CONFIG } from '../utils/Constants.js';
+import { CONFIG, DIFFICULTIES, DIFFICULTY_ORDER } from '../utils/Constants.js';
 import { clamp } from '../utils/MathUtil.js';
 
 export class MapSelectScene extends Scene {
@@ -23,6 +23,8 @@ export class MapSelectScene extends Scene {
     this.pressed = null;
     this.buttons = {};
     this.anim = 0;
+    this.difficulty = DIFFICULTIES[game.save?.settings?.difficulty] ? game.save.settings.difficulty : 'tough';
+    this.diffBtns = [];
   }
 
   enter() {
@@ -76,6 +78,16 @@ export class MapSelectScene extends Scene {
       x: w / 2 + 8, y: h - s.bottom - 58, w: 122, h: 48,
       label: 'БЕСКОНЕЧНО', icon: 'icon.wave'
     };
+    // ряд сложности: три кнопки над запуском
+    const dbw = 86, dbh = 34, dgap = 8;
+    const dTotal = dbw * 3 + dgap * 2;
+    this.diffBtns = DIFFICULTY_ORDER.map((key, i) => ({
+      key,
+      x: w / 2 - dTotal / 2 + i * (dbw + dgap),
+      y: h - s.bottom - 58 - dbh - 10,
+      w: dbw, h: dbh,
+      label: DIFFICULTIES[key].name
+    }));
     this.selected = clamp(this.selected ?? 0, 0, MAP_ORDER.length - 1);
   }
 
@@ -173,6 +185,12 @@ export class MapSelectScene extends Scene {
     this.endlessBtn.sub = this.endlessBtn.enabled ? '' : 'нужна 1 звезда';
     Draw.button(g, Object.assign(this.playBtn, { pressed: this.pressed === 'play' }));
     Draw.button(g, Object.assign(this.endlessBtn, { pressed: this.pressed === 'endless' }));
+    for (const b of this.diffBtns) {
+      Draw.button(g, Object.assign({}, b, {
+        accent: b.key === this.difficulty,
+        pressed: this.pressed === 'diff:' + b.key
+      }));
+    }
 
     Draw.roundButton(g, Object.assign(this.buttons.back, { pressed: this.pressed === 'back' }));
   }
@@ -250,6 +268,14 @@ export class MapSelectScene extends Scene {
       this.game.replaceScene(new MenuScene(this.game));
       return;
     }
+    for (const b of this.diffBtns) {
+      if (hit(b, x, y)) {
+        this.difficulty = b.key;
+        this.game.save?.setSetting?.('difficulty', b.key);
+        this.game.audio?.play('ui');
+        return;
+      }
+    }
     if (hit(this.playBtn, x, y)) { this._start(false); return; }
     if (hit(this.endlessBtn, x, y)) { this._start(true); return; }
 
@@ -281,7 +307,7 @@ export class MapSelectScene extends Scene {
       return;
     }
     this.game.audio?.play('build');
-    this.game.replaceScene(new GameScene(this.game, { mapId: id, endless }));
+    this.game.replaceScene(new GameScene(this.game, { mapId: id, endless, difficulty: this.difficulty }));
   }
 
   _centerOn(i, instant = false) {
@@ -292,10 +318,12 @@ export class MapSelectScene extends Scene {
   }
 
   onDown(x, y) {
+    const diffHit = this.diffBtns.find((b) => hit(b, x, y));
     this.pressed =
       hit(this.buttons.back, x, y) ? 'back'
         : hit(this.playBtn, x, y) ? 'play'
-          : hit(this.endlessBtn, x, y) ? 'endless' : null;
+          : hit(this.endlessBtn, x, y) ? 'endless'
+            : diffHit ? 'diff:' + diffHit.key : null;
     this.dragging = true;
     this.dragX = x;
     this.vel = 0;

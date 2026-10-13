@@ -340,8 +340,77 @@ section('4.1 Механики новых башен: Пиро, Лазер, Ул�
   const save = new SaveSystem();
   save.data.mapStars = { grasslands: 3, desert: 2, magma: 3, city: 3 };
   const fresh = save.syncUnlocks(TOWER_DEFS);
-  ok(['flame', 'laser', 'hive', 'nuke'].every((id) => fresh.includes(id) && save.isTowerUnlocked(id)),
+  ok(['flame', 'laser', 'link', 'hive', 'power', 'nuke'].every((id) => fresh.includes(id) && save.isTowerUnlocked(id)),
     `звёзды открывают новые башни: ${fresh.join(',')}`);
+}
+
+section('4.2 Связка и Усилитель');
+{
+  const { scene } = makeScene('grasslands');
+  const spawnAt = (def, x, y, mods = {}) => {
+    const e = createEnemy(scene, def, 0, 1, mods);
+    e.x = x; e.y = y; e.hp = e.maxHp;
+    scene.enemies.push(e);
+    return e;
+  };
+  const makeTower = (id, cx, cy, lvl = 3) => {
+    const t = createTower(scene, TOWER_DEFS[id], cx, cy);
+    t.level = lvl;
+    t.applyLevel();
+    t.buildAnim = 0;
+    t.cooldown = 0;
+    scene.towers.push(t);
+    return t;
+  };
+
+  // --- Связка: пара бьёт лучом, одиночка — нет ---
+  const linkA = makeTower('link', 5, 5);
+  const linkB = makeTower('link', 5, 8);
+  const onBeam = spawnAt(ENEMY_DEFS.soldier, linkA.x, (linkA.y + linkB.y) / 2, { hpMul: 100 });
+  const offBeam = spawnAt(ENEMY_DEFS.soldier, linkA.x + 60, (linkA.y + linkB.y) / 2, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  const beamBefore = onBeam.hp, offBefore = offBeam.hp;
+  linkA.update(0.016);
+  linkB.update(0.016);
+  ok(linkA.linkActive === true, 'две Связки образовали пару');
+  ok(onBeam.hp < beamBefore, `луч Связки бьёт по линии: ${Math.round(beamBefore - onBeam.hp)} за тик`);
+  ok(offBeam.hp === offBefore, 'вне линии луча урона нет');
+
+  scene.towers.splice(scene.towers.indexOf(linkB), 1);
+  const soloBefore = onBeam.hp;
+  linkA.update(0.016);
+  ok(linkA.linkActive === false && onBeam.hp === soloBefore, 'одиночная Связка не стреляет');
+
+  // --- Усилитель: бафф урона/радиуса и его мгновенная отмена ---
+  scene.towers.length = 0;
+  scene.enemies.length = 0;
+  const gat = makeTower('gatling', 5, 5, 1);
+  const baseDmg = gat.baseDamage, baseRange = gat.baseRange;
+  makeTower('power', 6, 5, 1);
+  scene.refreshTowerBuffs();
+  ok(Math.abs(gat.damage - baseDmg * 1.15) < 1e-9, `Усилитель L1: урон ×1.15 (${baseDmg} → ${gat.damage.toFixed(2)})`);
+  ok(Math.abs(gat.range - baseRange * 1.08) < 1e-9, `Усилитель L1: радиус ×1.08 (${baseRange} → ${gat.range.toFixed(1)})`);
+  scene.refreshTowerBuffs();
+  ok(Math.abs(gat.damage - baseDmg * 1.15) < 1e-9, 'повторный пересчёт не накапливает бафф');
+  scene.towers.splice(1, 1);   // продали Усилитель
+  scene.refreshTowerBuffs();
+  ok(gat.damage === baseDmg && gat.range === baseRange, 'после продажи Усилителя бафф пропал');
+}
+
+section('4.3 Сложности карты');
+{
+  const tough = makeScene('grasslands');
+  const heroic = makeScene('grasslands', { difficulty: 'heroic' });
+  const casual = makeScene('grasslands', { difficulty: 'casual' });
+  const eT = tough.scene.spawnEnemy({ type: 'soldier', entry: 0, wave: 1 });
+  const eH = heroic.scene.spawnEnemy({ type: 'soldier', entry: 0, wave: 1 });
+  const eC = casual.scene.spawnEnemy({ type: 'soldier', entry: 0, wave: 1 });
+  ok(eH.maxHp === Math.round(eT.maxHp * 1.3), `Героическая: HP ×1.3 (${eT.maxHp} → ${eH.maxHp})`);
+  ok(eC.maxHp === Math.round(eT.maxHp * 0.85), `Лёгкая: HP ×0.85 (${eT.maxHp} → ${eC.maxHp})`);
+  ok(heroic.scene.economy.rewardMul === 1.3 && casual.scene.economy.rewardMul === 0.85,
+    'награда за убийства зависит от сложности');
+  const bogus = makeScene('grasslands', { difficulty: 'nightmare' });
+  ok(bogus.scene.difficultyKey === 'tough', 'неизвестная сложность откатывается на Тяжёлую');
 }
 
 section('5. Формулы: HP-скейл, броня, замедление, воздушные цели');

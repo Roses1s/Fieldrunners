@@ -1119,6 +1119,71 @@ for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.laser.${lvl}`, () => buildLaserTurret(lvl));
   reg(`tower.hive.${lvl}`, () => buildHiveTurret(lvl));
   reg(`tower.nuke.${lvl}`, () => buildNukeTurret(lvl));
+  reg(`tower.link.${lvl}`, () => buildLinkTurret(lvl));
+  reg(`tower.power.${lvl}`, () => buildPowerTurret(lvl));
+}
+
+
+/** Связка: два рога излучателя и шар плазмы между ними */
+function buildLinkTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 3;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#dfe7f2' : '#9aa3b5');
+
+  // корпус-генератор
+  fillRR(g, 10, cy - 8, 22, 17, 5, vgrad(g, 10, cy - 8, 22, 17, '#4a7fbc', '#274a75'), 2.2);
+  g.strokeStyle = 'rgba(124,224,255,0.55)'; g.lineWidth = 1.6;
+  for (let i = 0; i < 3; i++) {
+    g.beginPath(); g.moveTo(13 + i * 6, cy - 5); g.lineTo(13 + i * 6, cy + 6); g.stroke();
+  }
+  // два рога вперёд
+  g.strokeStyle = trim; g.lineWidth = 3.2; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(30, cy - 5); g.quadraticCurveTo(40, cy - 9, 45, cy - 12);
+  g.moveTo(30, cy + 5); g.quadraticCurveTo(40, cy + 9, 45, cy + 12);
+  g.stroke();
+  circle(g, 45, cy - 12, 2.6, '#aee6ff', 1.4, trim);
+  circle(g, 45, cy + 12, 2.6, '#aee6ff', 1.4, trim);
+  // шар плазмы между рогами
+  const lg = g.createRadialGradient(47, cy, 0.5, 47, cy, 8 + level * 1.6);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#7ce0ff');
+  lg.addColorStop(1, 'rgba(124,224,255,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(47, cy, 8 + level * 1.6, 0, Math.PI * 2); g.fill();
+  circle(g, 47, cy, 3 + level * 0.5, '#eaf9ff', 1.4, '#39b6ff');
+  return c;
+}
+
+/** Усилитель: пилон с кольцами-излучателями ауры */
+function buildPowerTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 4;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#d9c8ff' : '#a68fd0');
+
+  // основание
+  fillRR(g, 10, cy - 7, 24, 15, 5, vgrad(g, 10, cy - 7, 24, 15, '#6a4f9e', '#3d2a63'), 2.2);
+  // пилон
+  fillRR(g, 24, cy - 20, 6, 22, 3, vgrad(g, 24, cy - 20, 6, 22, '#8a6fc0', '#4d3a75'), 1.8);
+  // кольца ауры (число растёт с уровнем)
+  g.strokeStyle = trim; g.lineWidth = 2;
+  for (let i = 0; i < 1 + level; i++) {
+    const ry = cy - 16 + i * 6;
+    g.beginPath(); g.ellipse(27, ry, 8.5 - i * 1.2, 3.2, 0, 0, Math.PI * 2); g.stroke();
+  }
+  // ядро
+  const lg = g.createRadialGradient(27, cy - 21, 0.5, 27, cy - 21, 8 + level * 1.5);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c9a6ff');
+  lg.addColorStop(1, 'rgba(201,166,255,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(27, cy - 21, 8 + level * 1.5, 0, Math.PI * 2); g.fill();
+  circle(g, 27, cy - 21, 3.2 + level * 0.5, '#efe6ff', 1.4, trim);
+  // индикаторные диоды на основании
+  for (let i = 0; i < 3; i++) circle(g, 15 + i * 7, cy + 3, 1.5, i <= level ? '#c9a6ff' : '#4a3a6e');
+  return c;
 }
 
 // Враги

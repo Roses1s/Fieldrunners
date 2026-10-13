@@ -18,7 +18,7 @@ import { GameHud } from './GameHud.js';
 import { PauseScene } from './PauseScene.js';
 import { GameOverScene } from './GameOverScene.js';
 
-import { CONFIG, TILE, CELL } from '../utils/Constants.js';
+import { CONFIG, TILE, CELL, DIFFICULTIES } from '../utils/Constants.js';
 import { clamp } from '../utils/MathUtil.js';
 
 import { GridSystem } from '../systems/GridSystem.js';
@@ -87,6 +87,11 @@ export class GameScene extends Scene {
     this.hoverCell = null;
     this.buildMode = false;
     this.lastBuiltId = 'gatling';
+
+    // ---- сложность карты (Лёгкая/Тяжёлая/Героическая) ----
+    this.difficultyKey = DIFFICULTIES[this.params.difficulty] ? this.params.difficulty : 'tough';
+    this.difficulty = DIFFICULTIES[this.difficultyKey];
+    this.economy.rewardMul = this.difficulty.rewardMul;
 
     // ---- прогрессия ----
     this.hpScale = CONFIG.HP_SCALE_PER_WAVE * (this.mapDef.hpScale || 1);
@@ -200,6 +205,7 @@ export class GameScene extends Scene {
 
     // 2) башни: прицеливание и выстрелы
     const towers = this.towers;
+    this.refreshTowerBuffs();
     for (let i = 0; i < towers.length; i++) towers[i].update(dt);
 
     // 3) враги: движение и статусы
@@ -299,7 +305,8 @@ export class GameScene extends Scene {
   spawnEnemy(p) {
     const def = ENEMY_DEFS[p.type] || ENEMY_DEFS.soldier;
     const e = createEnemy(this, def, p.entry | 0, p.wave || this.waves.wave, {
-      hpMul: p.hpMul, armorMul: p.armorMul, speedMul: p.speedMul, isBoss: p.isBoss
+      hpMul: (p.hpMul ?? 1) * this.difficulty.hpMul,
+      armorMul: p.armorMul, speedMul: p.speedMul, isBoss: p.isBoss
     });
     this.enemies.push(e);
     if (p.isBoss || def.isBoss) {
@@ -512,6 +519,40 @@ export class GameScene extends Scene {
     this.texts.spawn(this.worldW / 2, this.worldH / 2 + 16, `ВОЛНА ${wave} ОТБИТА  +$${bonus}`, '#6ee36e', 16, 1.6);
     this.audio?.play('upgrade');
     this.economy.score += 100 * wave;
+  }
+
+  /**
+   * Баффы Усилителей: damage/range каждой башни = база × лучший бафф из аур.
+   * Пересчёт от базовых значений каждый кадр, поэтому бафф не накапливается.
+   * Усилители не усиливают сами себя и друг друга (иначе ауры росли бы без предела).
+   */
+  refreshTowerBuffs() {
+    const towers = this.towers;
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      t.buffDmgMul = 1;
+      t.buffRangeMul = 1;
+    }
+    for (let i = 0; i < towers.length; i++) {
+      const p = towers[i];
+      if (p.def.behavior !== 'power') continue;
+      const aura = p.baseRange;
+      const bd = 1 + (p.buffDmgVal || 0);
+      const br = 1 + (p.buffRangeVal || 0);
+      for (let j = 0; j < towers.length; j++) {
+        const t = towers[j];
+        if (t === p || t.def.behavior === 'power') continue;
+        const dx = t.x - p.x, dy = t.y - p.y;
+        if (dx * dx + dy * dy > aura * aura) continue;
+        if (bd > t.buffDmgMul) t.buffDmgMul = bd;
+        if (br > t.buffRangeMul) t.buffRangeMul = br;
+      }
+    }
+    for (let i = 0; i < towers.length; i++) {
+      const t = towers[i];
+      t.damage = t.baseDamage * t.buffDmgMul;
+      t.range = t.baseRange * t.buffRangeMul;
+    }
   }
 
   sendNextWave() {

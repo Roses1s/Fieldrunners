@@ -95,7 +95,9 @@ function bestSpot(scene) {
 function chooseTower(scene) {
   const money = scene.economy.money;
   const air = scene.enemies.some((e) => e.flying) || scene.waves.wave >= 5;
-  const options = scene.availableTowers().filter((d) => d.cost <= money);
+  // бот-новичок не умеет в парные/поддерживающие башни — не тратится на них
+  const options = scene.availableTowers()
+    .filter((d) => d.cost <= money && d.behavior !== 'link' && d.behavior !== 'power');
   if (!options.length) return null;
   const byId = Object.create(null);
   for (const d of options) byId[d.id] = d;
