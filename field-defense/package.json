@@ -1,0 +1,15 @@
+{
+  "name": "field-defense",
+  "version": "0.9.0",
+  "private": true,
+  "type": "module",
+  "description": "FIELD DEFENSE — оригинальная браузерная mobile-first tower defense игра на HTML5 Canvas. Вся графика генерируется кодом, весь звук синтезируется Web Audio API. Без внешних зависимостей.",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node tests/sim.mjs",
+    "start": "node tools/serve.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f1e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Field Defense — браузерная мобильная tower defense игра на HTML5 Canvas. Оригинальный проект в жанре TD: 8 типов башен, мейзинг, волны, боссы.">
+<title>FIELD DEFENSE — Tower Defense</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Единственный canvas: вся графика рисуется процедурно через Canvas 2D -->
+    <canvas id="game"></canvas>
+
+    <!-- Отладка (FPS / сущности) — включается клавишей F или ?debug=1 -->
+    <div id="debug"></div>
+
+    <!-- Подсказка «поверните устройство» для портретной ориентации на телефоне -->
+    <div class="overlay" id="rotate">
+      <div class="rotate-icon"></div>
+      <h1>Поверните телефон</h1>
+      <p>Игра рассчитана на ландшафт: так карта и сенсорное управление работают лучше всего.</p>
+    </div>
+
+    <!-- Загрузочный экран -->
+    <div class="overlay visible" id="boot">
+      <h1>FIELD DEFENSE</h1>
+      <div class="bar"><i></i></div>
+      <p>Генерация графики и звука…</p>
+    </div>
+  </div>
+
+  <!-- Точка входа: ES6-модули, без внешних зависимостей -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
