@@ -5,13 +5,17 @@
 
 import { map_grasslands } from './map_grasslands.js';
 import { map_desert } from './map_desert.js';
+import { map_magma } from './map_magma.js';
+import { map_city } from './map_city.js';
 
 /** Порядок карт в меню выбора */
-export const MAP_ORDER = ['grasslands', 'desert'];
+export const MAP_ORDER = ['grasslands', 'desert', 'magma', 'city'];
 
 export const MAPS = {
   grasslands: map_grasslands,
-  desert: map_desert
+  desert: map_desert,
+  magma: map_magma,
+  city: map_city
 };
 
 export function getMap(id) {

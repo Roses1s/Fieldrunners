@@ -127,7 +127,7 @@ export const TOWER_DEFS = {
   flame: {
     id: 'flame', name: 'Пиро', en: 'Pyro',
     desc: 'Конус огня, накрывает всех вокруг. Отлично у входа.',
-    unlock: 6, cost: 90, upCost: [70, 70],
+    unlock: 3, cost: 90, upCost: [70, 70],
     dmg: [183, 366, 550], rate: [2, 2, 2],
     range: [R(1.8), R(1.9), R(2.0)],
     dps: [366, 733, 1100],
@@ -138,7 +138,7 @@ export const TOWER_DEFS = {
   laser: {
     id: 'laser', name: 'Лазер', en: 'Laser',
     desc: 'Непрерывный луч, пробивает всех на линии. Урон нарастает.',
-    unlock: 9, cost: 40, upCost: [30, 30],
+    unlock: 5, cost: 40, upCost: [30, 30],
     dmg: [25, 50, 90], rate: [5, 5, 5],
     range: [R(3.2), R(3.4), R(3.6)],
     dps: [125, 250, 450],
@@ -149,7 +149,7 @@ export const TOWER_DEFS = {
   hive: {
     id: 'hive', name: 'Улей', en: 'Hive',
     desc: 'Рой пчёл: групповой урон по площади, достает воздушные цели.',
-    unlock: 12, cost: 30, upCost: [20, 20],
+    unlock: 8, cost: 30, upCost: [20, 20],
     dmg: [53, 64, 60], rate: [1, 1, 1],
     range: [R(3.0), R(3.2), R(3.4)],
     dps: [160, 320, 480],
@@ -159,12 +159,15 @@ export const TOWER_DEFS = {
   },
   nuke: {
     id: 'nuke', name: 'Ядерная', en: 'Nuke',
-    desc: 'Огромный взрыв с «пустым» центром. Перезаряжается очень долго.',
-    unlock: 16, cost: 120, upCost: [90, 90],
+    desc: 'Огромный взрыв: в эпицентре урон ослаблен. Перезаряжается очень долго.',
+    unlock: 11, cost: 120, upCost: [90, 90],
     dmg: [280, 560, 840], rate: [0.2, 0.25, 0.3],
     range: [R(3.5), R(3.6), R(3.75)],
     splash: [R(2.0), R(2.5), R(3.25)],
-    innerGap: [R(0.6), R(0.7), R(0.8)],
+    // «пустой центр»: в эпицентре урон сильно ослаблен, но не нулевой —
+    // иначе мина, которая всегда взрывается в своей цели, не наносила бы ей урона
+    innerGap: [R(0.5), R(0.6), R(0.7)],
+    gapDamageRatio: 0.25,
     damageType: DAMAGE_TYPE.EXPLOSIVE, targets: 'both', behavior: 'nuke',
     color: '#4d5a3a', accent: '#c6ff4f', arc: Math.PI * 2, turnSpeed: 3,
     shake: 8, sfx: 'nuke'

@@ -10,6 +10,7 @@
    ========================================================================== */
 
 import { CONFIG } from './utils/Constants.js';
+import { TOWER_DEFS } from './data/TowerData.js';
 import { Camera } from './utils/Camera.js';
 import { TouchInput } from './utils/TouchInput.js';
 import { AudioSystem } from './systems/AudioSystem.js';
@@ -76,6 +77,8 @@ export class Game {
     document.addEventListener('visibilitychange', () => this.onVisibility());
 
     this.setDebug(!!this.save.settings.showFps);
+    // открыть башни, порог по звёздам которых уже достигнут (после загрузки сохранения)
+    this.save.syncUnlocks(TOWER_DEFS);
     this.replaceScene(new MenuScene(this));
     this.booted = true;
     return this;

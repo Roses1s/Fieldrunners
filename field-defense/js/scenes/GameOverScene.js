@@ -10,6 +10,8 @@ import { MapSelectScene } from './MapSelectScene.js';
 import { MenuScene } from './MenuScene.js';
 import { Draw, hit } from '../utils/Draw.js';
 import { clamp } from '../utils/MathUtil.js';
+import { TOWER_DEFS } from '../data/TowerData.js';
+import { MAPS } from '../maps/MapData.js';
 
 export class GameOverScene extends Scene {
   constructor(game, params = {}) {
@@ -126,6 +128,15 @@ export class GameOverScene extends Scene {
     Draw.text(g, p.won ? 'Все волны отбиты, база устояла' : 'База пала — враги прорвались',
       w / 2, box.y + 64, { size: 13, align: 'center', color: '#9fd0ff', weight: 700 });
 
+    // только что открытые звёздами башни — сразу показываем награду игроку
+    const unlockedNames = (p.unlocked || [])
+      .map((id) => TOWER_DEFS[id]?.name || id)
+      .filter(Boolean);
+    if (unlockedNames.length) {
+      Draw.text(g, `Новая башня: ${unlockedNames.join(', ')}`,
+        w / 2, box.y + 82, { size: 12, align: 'center', color: '#ffd23f', weight: 800 });
+    }
+
     // звёзды
     const starY = box.y + 100;
     for (let i = 0; i < 3; i++) {
@@ -197,8 +208,7 @@ export class GameOverScene extends Scene {
 }
 
 function mapName(id) {
-  const names = { grasslands: 'Зелёная долина', desert: 'Песчаный карьер' };
-  return names[id] || id;
+  return MAPS[id]?.name || id;
 }
 
 export default GameOverScene;

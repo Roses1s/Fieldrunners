@@ -1421,6 +1421,205 @@ reg('decor.building.0', () => buildBuilding(3));
 reg('decor.building.1', () => buildBuilding(71));
 reg('decor.building.2', () => buildBuilding(211));
 
+/* ==========================================================================
+   Турели второй очереди: Пиро, Лазер, Улей, Ядерная.
+   Все рисуются кодом, «вправо» = угол 0 (как у остальных башен).
+   ========================================================================== */
+
+/** Пиро: бак со смесью + широкое сопло конусом + дежурный огонёк */
+function buildFlameTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 1;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#c3ccd8' : '#8b95a5');
+
+  // бак(и) со смесью
+  fillRR(g, 8, cy - 12, 18, 25, 6, vgrad(g, 8, cy - 12, 18, 25, '#d8643a', '#8e3620'), 2.2);
+  g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 1.8;
+  for (let i = 0; i < 3; i++) {
+    g.beginPath(); g.moveTo(9, cy - 7 + i * 7); g.lineTo(25, cy - 7 + i * 7); g.stroke();
+  }
+  if (level >= 1) {
+    // второй бак на уровнях 2–3
+    fillRR(g, 12, cy - 19, 12, 9, 4, vgrad(g, 12, cy - 19, 12, 9, '#e07a4a', '#93401f'), 2);
+  }
+  // манометр
+  circle(g, 15, cy - 3, 3.2, '#2b2f3a', 1.4, trim);
+  g.strokeStyle = '#c6ff4f'; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(15, cy - 3); g.lineTo(17, cy - 5); g.stroke();
+
+  // сопло: расширяющийся конус
+  const nw = 7 + level * 1.6;
+  poly(g, [26, cy - 4, 44, cy - nw, 46, cy - nw + 1.5, 46, cy + nw - 1.5, 44, cy + nw, 26, cy + 4],
+    vgrad(g, 26, cy - nw, 20, nw * 2, '#6f7683', '#3b414d'), 2.2);
+  // раструб
+  fillRR(g, 43, cy - nw - 0.5, 5, nw * 2 + 1, 2, trim, 1.8);
+  // дежурный огонёк у среза
+  const fl = g.createRadialGradient(49, cy, 0.5, 49, cy, 6 + level);
+  fl.addColorStop(0, 'rgba(255,255,220,0.95)');
+  fl.addColorStop(0.45, 'rgba(255,155,61,0.75)');
+  fl.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = fl;
+  g.beginPath(); g.arc(49, cy, 6 + level, 0, Math.PI * 2); g.fill();
+  // шланг
+  g.strokeStyle = '#5a3a2a'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(17, cy + 13); g.quadraticCurveTo(24, cy + 21, 31, cy + 9); g.stroke();
+  return c;
+}
+
+/** Лазер: корпус с двумя излучателями, фокусирующий кристалл, радиатор */
+function buildLaserTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 1;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#dfe7f2' : '#9aa3b5');
+
+  // радиатор сзади
+  g.strokeStyle = '#4a5162'; g.lineWidth = 2;
+  for (let i = 0; i < 3 + level; i++) {
+    const x = 9 + i * 3.2;
+    g.beginPath(); g.moveTo(x, cy - 11); g.lineTo(x, cy + 11); g.stroke();
+  }
+  // корпус
+  fillRR(g, 14, cy - 8, 24, 16, 5, vgrad(g, 14, cy - 8, 24, 16, '#8a6fc0', '#4d3a75'), 2.2);
+  // два излучателя (рельсы)
+  fillRR(g, 30, cy - 9.5, 16, 5, 2.2, vgrad(g, 30, cy - 9.5, 16, 5, '#cfd6e4', '#6c7486'), 1.8);
+  fillRR(g, 30, cy + 4.5, 16, 5, 2.2, vgrad(g, 30, cy + 4.5, 16, 5, '#cfd6e4', '#6c7486'), 1.8);
+  // кристалл в фокусе
+  const cx0 = 45, cr = 4.2 + level * 0.9;
+  const lg = g.createRadialGradient(cx0, cy, 0.5, cx0, cy, cr * 2.6);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.35, '#ff5ad1');
+  lg.addColorStop(1, 'rgba(255,90,209,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(cx0, cy, cr * 2.6, 0, Math.PI * 2); g.fill();
+  poly(g, [cx0, cy - cr, cx0 + cr * 0.85, cy, cx0, cy + cr, cx0 - cr * 0.85, cy],
+    '#ffd9f4', 1.6, trim);
+  // энерго-шляпка сверху
+  circle(g, 20, cy - 10, 2.6, '#ff5ad1', 1.4, trim);
+  return c;
+}
+
+/** Улей: блок сот + леток + пара пчёл на подлёте */
+function buildHiveTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 2;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#c9a227' : '#8b7a3a');
+
+  // корпус улья
+  fillRR(g, 10, cy - 15, 26, 30, 6, vgrad(g, 10, cy - 15, 26, 30, '#e0b84a', '#8a6a1c'), 2.4);
+  // соты (шестиугольники)
+  const hex = (hx, hy, r) => {
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      const px = hx + Math.cos(a) * r, py = hy + Math.sin(a) * r;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+  };
+  const rows = 2 + level;
+  for (let ry = 0; ry < rows; ry++) {
+    for (let rx = 0; rx < 2; rx++) {
+      const hx = 17 + rx * 12, hy = cy - 9 + ry * (18 / rows) + (rx % 2 ? 3 : 0);
+      hex(hx, hy, 4.6);
+      g.fillStyle = 'rgba(60,40,10,0.55)'; g.fill();
+      g.strokeStyle = 'rgba(255,235,160,0.5)'; g.lineWidth = 1; g.stroke();
+    }
+  }
+  // леток (щель) спереди
+  fillRR(g, 34, cy - 3, 8, 6, 2.5, '#3a2c0c', 1.8);
+  // посадочная полка
+  fillRR(g, 32, cy + 4, 12, 3.4, 1.6, trim, 1.4);
+  // пчёлы на подлёте
+  const bee = (bx, by, sc) => {
+    g.save(); g.translate(bx, by); g.scale(sc, sc);
+    g.fillStyle = '#ffe66d';
+    g.beginPath(); g.ellipse(0, 0, 3.4, 2.4, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#3a2c0c'; g.lineWidth = 1.1;
+    g.beginPath(); g.moveTo(-0.6, -2.2); g.lineTo(-0.6, 2.2); g.moveTo(1.6, -2); g.lineTo(1.6, 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.6)';
+    g.beginPath(); g.ellipse(-0.6, -3, 2.6, 1.3, -0.4, 0, Math.PI * 2); g.fill();
+    g.restore();
+  };
+  bee(44, cy - 8, 1 + level * 0.1);
+  if (level >= 1) bee(47, cy + 6, 0.9);
+  if (level >= 2) bee(41, cy + 12, 0.8);
+  return c;
+}
+
+/** Ядерная: короткая мортира с толстым стволом, зелёный заряд, опознавательные полосы */
+function buildNukeTurret(level) {
+  const S = 56;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 3;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#b9c4d6' : '#7d8798');
+
+  // станина
+  fillRR(g, 8, cy - 6, 22, 18, 4, vgrad(g, 8, cy - 6, 22, 18, '#6b7480', '#39414c'), 2.4);
+  // опознавательные полосы (опасный груз)
+  g.save();
+  rr(g, 9, cy + 5, 20, 6, 2); g.clip();
+  g.strokeStyle = '#c6ff4f'; g.lineWidth = 2.4;
+  for (let i = -1; i < 6; i++) {
+    g.beginPath(); g.moveTo(9 + i * 5, cy + 12); g.lineTo(9 + i * 5 + 6, cy + 3); g.stroke();
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1.6;
+  rr(g, 9, cy + 5, 20, 6, 2); g.stroke();
+
+  // толстый ствол мортиры (задран вверх-вперёд)
+  const bw = 8 + level * 1.3;
+  g.save();
+  g.translate(24, cy - 4);
+  g.rotate(-0.34);
+  fillRR(g, 0, -bw / 2, 24, bw, 3, vgrad(g, 0, -bw / 2, 24, bw, '#7e8898', '#414a58'), 2.2);
+  // дульный срез
+  fillRR(g, 21, -bw / 2 - 1, 5, bw + 2, 2, trim, 1.8);
+  // бандажи
+  g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 2;
+  for (let i = 0; i < 2 + level; i++) {
+    const x = 5 + i * 6;
+    g.beginPath(); g.moveTo(x, -bw / 2 + 1); g.lineTo(x, bw / 2 - 1); g.stroke();
+  }
+  g.restore();
+
+  // заряд в стволе: зелёное свечение
+  const gx = 47, gy = cy - 12;
+  const lg = g.createRadialGradient(gx, gy, 0.5, gx, gy, 8 + level * 1.5);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c6ff4f');
+  lg.addColorStop(1, 'rgba(140,214,47,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(gx, gy, 8 + level * 1.5, 0, Math.PI * 2); g.fill();
+  circle(g, gx, gy, 3.4, '#e9ffb0', 1.6, '#6f9a24');
+  // гидроцилиндр подъёма
+  g.strokeStyle = '#2f3540'; g.lineWidth = 3.4;
+  g.beginPath(); g.moveTo(14, cy + 4); g.lineTo(24, cy - 8); g.stroke();
+  g.strokeStyle = trim; g.lineWidth = 1.4;
+  g.beginPath(); g.moveTo(14, cy + 4); g.lineTo(24, cy - 8); g.stroke();
+  return c;
+}
+
+/** Мина ядерного заряда: тёмный корпус, зелёная головка, хвостовые перья */
+function buildShell() {
+  const c = makeCanvas(20, 10), g = ctxOf(c);
+  // перья
+  poly(g, [1, 5, 5, 1.5, 6.5, 5, 5, 8.5], '#6f9a24', 1.2);
+  // корпус
+  fillRR(g, 5, 2.6, 9, 4.8, 2.2, vgrad(g, 5, 2.6, 9, 4.8, '#8b929e', '#3d434e'), 1.4);
+  // головка
+  const lg = g.createRadialGradient(16, 5, 0.4, 16, 5, 4.4);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c6ff4f');
+  lg.addColorStop(1, 'rgba(140,214,47,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(16, 5, 4.4, 0, Math.PI * 2); g.fill();
+  circle(g, 15.6, 5, 2.2, '#e9ffb0', 1.2, '#6f9a24');
+  return c;
+}
+
 // Башни
 for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.base.${lvl}`, () => buildTowerBase(lvl));
@@ -1428,6 +1627,10 @@ for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.glue.${lvl}`, () => buildGlueTurret(lvl));
   reg(`tower.missile.${lvl}`, () => buildMissileTurret(lvl));
   reg(`tower.tesla.${lvl}`, () => buildTeslaTurret(lvl));
+  reg(`tower.flame.${lvl}`, () => buildFlameTurret(lvl));
+  reg(`tower.laser.${lvl}`, () => buildLaserTurret(lvl));
+  reg(`tower.hive.${lvl}`, () => buildHiveTurret(lvl));
+  reg(`tower.nuke.${lvl}`, () => buildNukeTurret(lvl));
 }
 
 // Враги
@@ -1444,6 +1647,7 @@ reg('proj.bullet', buildBullet);
 reg('proj.missile', buildMissile);
 reg('proj.glue', buildGlueBlob);
 reg('proj.bee', buildBee);
+reg('proj.shell', buildShell);
 
 // Иконки
 reg('icon.coin', buildCoin);
@@ -2287,7 +2491,7 @@ const TOWER_DEFS = {
   flame: {
     id: 'flame', name: 'Пиро', en: 'Pyro',
     desc: 'Конус огня, накрывает всех вокруг. Отлично у входа.',
-    unlock: 6, cost: 90, upCost: [70, 70],
+    unlock: 3, cost: 90, upCost: [70, 70],
     dmg: [183, 366, 550], rate: [2, 2, 2],
     range: [R(1.8), R(1.9), R(2.0)],
     dps: [366, 733, 1100],
@@ -2298,7 +2502,7 @@ const TOWER_DEFS = {
   laser: {
     id: 'laser', name: 'Лазер', en: 'Laser',
     desc: 'Непрерывный луч, пробивает всех на линии. Урон нарастает.',
-    unlock: 9, cost: 40, upCost: [30, 30],
+    unlock: 5, cost: 40, upCost: [30, 30],
     dmg: [25, 50, 90], rate: [5, 5, 5],
     range: [R(3.2), R(3.4), R(3.6)],
     dps: [125, 250, 450],
@@ -2309,7 +2513,7 @@ const TOWER_DEFS = {
   hive: {
     id: 'hive', name: 'Улей', en: 'Hive',
     desc: 'Рой пчёл: групповой урон по площади, достает воздушные цели.',
-    unlock: 12, cost: 30, upCost: [20, 20],
+    unlock: 8, cost: 30, upCost: [20, 20],
     dmg: [53, 64, 60], rate: [1, 1, 1],
     range: [R(3.0), R(3.2), R(3.4)],
     dps: [160, 320, 480],
@@ -2319,12 +2523,15 @@ const TOWER_DEFS = {
   },
   nuke: {
     id: 'nuke', name: 'Ядерная', en: 'Nuke',
-    desc: 'Огромный взрыв с «пустым» центром. Перезаряжается очень долго.',
-    unlock: 16, cost: 120, upCost: [90, 90],
+    desc: 'Огромный взрыв: в эпицентре урон ослаблен. Перезаряжается очень долго.',
+    unlock: 11, cost: 120, upCost: [90, 90],
     dmg: [280, 560, 840], rate: [0.2, 0.25, 0.3],
     range: [R(3.5), R(3.6), R(3.75)],
     splash: [R(2.0), R(2.5), R(3.25)],
-    innerGap: [R(0.6), R(0.7), R(0.8)],
+    // «пустой центр»: в эпицентре урон сильно ослаблен, но не нулевой —
+    // иначе мина, которая всегда взрывается в своей цели, не наносила бы ей урона
+    innerGap: [R(0.5), R(0.6), R(0.7)],
+    gapDamageRatio: 0.25,
     damageType: DAMAGE_TYPE.EXPLOSIVE, targets: 'both', behavior: 'nuke',
     color: '#4d5a3a', accent: '#c6ff4f', arc: Math.PI * 2, turnSpeed: 3,
     shake: 8, sfx: 'nuke'
@@ -3181,6 +3388,8 @@ class Projectile {
     this.target = null;
     this.damage = 0;
     this.splash = 0;
+    this.innerGap = 0;         // «пустой центр» взрыва (ядерная башня)
+    this.gapRatio = 0;         // доля урона внутри этого центра
     this.damageType = 'physical';
     this.pierceArmor = 0;
     this.life = 2;
@@ -3220,7 +3429,7 @@ class ProjectilePool {
   }
 
   /**
-   * o = { type, x, y, target, speed, damage, splash, damageType, pierceArmor,
+   * o = { type, x, y, target, speed, damage, splash, innerGap, damageType, pierceArmor,
    *       slow, slowTime, slowTargets, owner, color, size, turn, life, angle }
    */
   spawn(o) {
@@ -3233,6 +3442,8 @@ class ProjectilePool {
     p.speed = o.speed ?? 480;
     p.damage = o.damage ?? 1;
     p.splash = o.splash ?? 0;
+    p.innerGap = o.innerGap ?? 0;
+    p.gapRatio = o.gapRatio ?? 0;
     p.damageType = o.damageType ?? 'physical';
     p.pierceArmor = o.pierceArmor ?? 0;
     p.slow = o.slow ?? 0;
@@ -3245,7 +3456,7 @@ class ProjectilePool {
     p.life = o.life ?? 2.5;
     p.t = 0;
     p.trail = 0;
-    p.homing = p.type === PROJ.MISSILE || p.type === PROJ.BEE || !!o.homing;
+    p.homing = p.type === PROJ.MISSILE || p.type === PROJ.BEE || p.type === PROJ.SHELL || !!o.homing;
     p.returning = false;
     p.homeX = o.homeX ?? p.x;
     p.homeY = o.homeY ?? p.y;
@@ -3301,6 +3512,18 @@ class ProjectilePool {
             PT.SMOKE, 9, -8
           );
         }
+      } else if (p.type === PROJ.SHELL) {
+        p.trail -= dt;
+        if (p.trail <= 0) {
+          p.trail = 0.028;
+          g.particles.emit(
+            p.x - Math.cos(p.angle) * 5, p.y - Math.sin(p.angle) * 5,
+            randRange(-10, 10), randRange(-14, 2),
+            randRange(0.35, 0.7), randRange(2, 4),
+            Math.random() < 0.4 ? '#c6ff4f' : '#9a9a9a',
+            PT.SMOKE, 8, -10
+          );
+        }
       } else if (p.type === PROJ.BULLET) {
         p.trail -= dt;
         if (p.trail <= 0) {
@@ -3354,7 +3577,8 @@ class ProjectilePool {
         p.active = false;
         break;
       }
-      case PROJ.MISSILE: {
+      case PROJ.MISSILE:
+      case PROJ.SHELL: {
         this.explode(p, p.x, p.y);
         p.active = false;
         break;
@@ -3411,7 +3635,8 @@ class ProjectilePool {
   /** Взрыв с уроном по площади (ракеты, ядерный заряд) */
   explode(p, x, y) {
     const g = this.game;
-    const big = p.splash > 70;
+    const gap = p.innerGap || 0;      // > 0 — «пончик»: в эпицентре урон ослаблен
+    const big = p.splash > 70 || gap > 0;
     g.effects.spawn(1 /* EXPLOSION */, {
       x, y, size: Math.max(10, p.splash * 0.85), life: big ? 0.62 : 0.34,
       color: '#ffd9a0', width: big ? 4 : 2.4
@@ -3433,17 +3658,40 @@ class ProjectilePool {
     g.effects.spawn(5 /* SCORCH */, {
       x, y: y + 2, size: p.splash * 0.55, life: big ? 6 : 3, angle: randRange(0, 3)
     });
+    if (gap > 0) {
+      // ядерный заряд: грибовидное облако + зелёная вспышка + кольцо эпицентра
+      g.effects.spawn(7 /* MUSHROOM */, {
+        x, y, size: p.splash * 0.9, size2: p.splash * 1.5, life: 1.1, color: '#c6ff4f'
+      });
+      g.effects.spawn(8 /* FLASH */, { x, y, size: p.splash * 1.2, life: 0.22, color: 'rgba(210,255,140,0.9)' });
+      g.effects.spawn(6 /* SHOCKWAVE */, {
+        x, y, size: gap, size2: p.splash * 1.15, life: 0.62,
+        color: 'rgba(198,255,79,0.85)', width: 4
+      });
+      g.particles.burst(x, y, {
+        count: 22, colors: ['#c6ff4f', '#8fd62f', '#e9ffb0'],
+        speed: [30, 130], life: [0.5, 1.1], size: [2, 5], gravity: -22, drag: 1.2, type: PT.SMOKE
+      });
+    }
     g.audio?.play(big ? 'nuke' : 'explosion', { big });
     if (big) g.camera?.shake(9, 0.5);
     else g.camera?.shake(2.2, 0.16);
 
-    // урон по площади с затуханием к краю
+    // урон по площади с затуханием к краю; в эпицентре — только gapRatio от полного
     const list = g.collision.queryCircle(x, y, p.splash, false);
+    const span = Math.max(1, p.splash - gap);
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e.alive) continue;
       const d = dist(x, y, e.x, e.y);
-      const k = clamp(1 - (d / (p.splash + e.radius)) * 0.65, 0.35, 1);
+      if (gap > 0 && d < gap + e.radius * 0.5) {
+        // эпицентр: урон ослаблен в gapRatio раз (мина прилетает ровно в цель,
+        // поэтому полный ноль сделал бы башню бесполезной против своей же цели)
+        g.damageEnemy(e, p.damage * (p.gapRatio || 0), p.damageType,
+          { pierceArmor: p.pierceArmor, source: p.owner });
+        continue;
+      }
+      const k = clamp(1 - ((d - gap) / (span + e.radius)) * 0.65, 0.35, 1);
       g.damageEnemy(e, p.damage * k, p.damageType, { pierceArmor: p.pierceArmor, source: p.owner });
     }
   }
@@ -3471,6 +3719,20 @@ class ProjectilePool {
         }
         case PROJ.MISSILE: {
           Sprites.draw(g, 'proj.missile', p.x, p.y, { rot: p.angle, scale: 0.95 * p.size });
+          break;
+        }
+        case PROJ.SHELL: {
+          // визуальная навесная траектория: подъём по синусоиде + тень на земле
+          const k = clamp(p.life > 0 ? p.t / p.life : 0, 0, 1);
+          const lift = Math.sin(Math.PI * k) * 26;
+          g.save();
+          g.globalAlpha = 0.28;
+          g.fillStyle = '#000';
+          g.beginPath();
+          g.ellipse(p.x, p.y + 3, 6 * p.size, 2.6 * p.size, 0, 0, Math.PI * 2);
+          g.fill();
+          g.restore();
+          Sprites.draw(g, 'proj.shell', p.x, p.y - lift, { rot: p.angle, scale: p.size });
           break;
         }
         case PROJ.GLUE: {
@@ -3986,6 +4248,609 @@ class TeslaTower extends Tower {
 
 registerTower('tesla', TeslaTower);
 void TeslaTower;
+
+
+/* ==== js/entities/towers/FlameTower.js ==== */
+/* ==========================================================================
+   FlameTower.js — огнемёт «Пиро» ($90, апгрейд $70).
+
+   Конус огня вместо снаряда: за один «плевок» (2 раза в секунду) урон
+   получают ВСЕ наземные цели внутри конуса 45/55/65° на дистанции 1.8–2 тайла.
+   Дополнительно поджигает: burnDps 12/24/40 в течение 3 с (тик раз в 0.5 с).
+   Воздух не достаёт — это башня для входа и узких коридоров.
+   ========================================================================== */
+
+
+class FlameTower extends Tower {
+  constructor(game, def, cx, cy) {
+    super(game, def, cx, cy);
+    this.flameT = 0;          // сколько ещё рисуется конус огня
+    this.flameAng = 0;        // направление последнего плевка
+    this.burnDps = def.burnDps ? def.burnDps[0] : 12;
+    this.burnTime = def.burnTime || 3;
+  }
+
+  get turretPivot() { return [26, 27]; }
+
+  applyLevel() {
+    super.applyLevel();
+    const i = this.level - 1;
+    if (this.def.burnDps) this.burnDps = this.def.burnDps[i];
+    if (this.def.burnTime) this.burnTime = this.def.burnTime;
+  }
+
+  /**
+   * Огненный конус: бьём сразу по всем, кто попал в сектор.
+   * Снарядов нет — урон мгновенный, поэтому хорошо работает в толпе.
+   */
+  fire(target) {
+    const g = this.game;
+    const d = this.def;
+    const half = (this.cone || Math.PI / 4) / 2;
+    this.flameT = 0.22;
+    this.flameAng = this.angle;
+
+    const list = g.collision.queryCircle(this.x, this.y, this.range, true); // только наземные
+    let hit = 0;
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i];
+      if (!this.canTarget(e)) continue;
+      const dd = dist(this.x, this.y, e.x, e.y);
+      if (dd > this.range + e.radius) continue;
+      // угол до цели с учётом радиуса самого врага (чтобы конус «цеплял» крайних)
+      const a = Math.atan2(e.y - this.y, e.x - this.x);
+      const spread = Math.atan2(e.radius, Math.max(8, dd));
+      if (Math.abs(normAngle(a - this.angle)) > half + spread) continue;
+
+      g.damageEnemy(e, this.damage, d.damageType, { source: this });
+      e.applyBurn(this.burnDps, this.burnTime);
+      hit++;
+
+      // искры и дым на самой цели
+      g.particles.burst(e.x, e.y, {
+        count: 4, colors: ['#fff0b0', '#ff9b3d', '#ff5a1f'],
+        speed: [25, 90], life: [0.14, 0.34], size: [1.2, 2.8],
+        gravity: -30, drag: 2.4, type: PT.FLAME
+      });
+    }
+
+    // сам конус: поток частиц вдоль направления
+    const mx = this.x + Math.cos(this.angle) * 14;
+    const my = this.y + Math.sin(this.angle) * 14 - 14;
+    const reach = this.range * (hit > 0 ? 1 : 0.72);
+    const n = 10 + this.level * 3;
+    for (let k = 0; k < n; k++) {
+      const a = this.angle + randRange(-half, half) * (0.4 + 0.6 * (k / n));
+      const sp = randRange(reach * 1.6, reach * 3.1);
+      g.particles.emit(
+        mx, my,
+        Math.cos(a) * sp, Math.sin(a) * sp - randRange(6, 26),
+        randRange(0.22, 0.5), randRange(2.4, 5.6),
+        k % 3 === 0 ? '#fff0b0' : (k % 3 === 1 ? '#ff9b3d' : '#ff5a1f'),
+        PT.FLAME, randRange(30, 80), -18
+      );
+    }
+    if (hit > 0) {
+      g.effects.spawn(FX.SCORCH, {
+        x: this.x + Math.cos(this.angle) * reach * 0.6,
+        y: this.y + Math.sin(this.angle) * reach * 0.6 + 4,
+        size: reach * 0.42, life: 1.6, angle: this.angle
+      });
+    }
+    g.effects.spawn(FX.MUZZLE, {
+      x: mx + Math.cos(this.angle) * 8, y: my + Math.sin(this.angle) * 8,
+      angle: this.angle, size: 10 + this.level * 2, life: 0.14, color: '#ffb46b'
+    });
+    g.audio?.play('flame', { priority: hit > 2 ? 2 : 1 });
+    if (hit > 3) g.camera?.shake(0.7, 0.07);
+  }
+
+  update(dt) {
+    super.update(dt);
+    if (this.flameT > 0) this.flameT = Math.max(0, this.flameT - dt);
+  }
+
+  /** Рисуем турель + сам конус огня поверх */
+  render(g, time) {
+    super.render(g, time);
+    if (this.flameT <= 0) return;
+
+    const k = this.flameT / 0.22;                 // 1 → 0
+    const half = (this.cone || Math.PI / 4) / 2;
+    const len = this.range * (0.55 + 0.45 * (1 - k));
+    const ox = this.x;
+    const oy = this.y - 14;
+
+    g.save();
+    g.translate(ox, oy);
+    g.rotate(this.flameAng);
+    g.globalCompositeOperation = 'lighter';
+
+    // три слоя конуса: горячее ядро, середина, внешняя кромка
+    const layers = [
+      { a: 0.30 * k, w: half * 0.45, l: len * 0.92, c: 'rgba(255,240,176,0.95)' },
+      { a: 0.24 * k, w: half * 0.75, l: len, c: 'rgba(255,155,61,0.85)' },
+      { a: 0.16 * k, w: half, l: len * 1.06, c: 'rgba(255,90,31,0.7)' }
+    ];
+    for (const L of layers) {
+      const grad = g.createLinearGradient(0, 0, L.l, 0);
+      grad.addColorStop(0, L.c);
+      grad.addColorStop(0.55, L.c.replace(/[\d.]+\)$/, `${clamp(L.a * 1.6, 0, 1).toFixed(2)})`));
+      grad.addColorStop(1, 'rgba(255,60,20,0)');
+      g.globalAlpha = 1;
+      g.fillStyle = grad;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.arc(0, 0, L.l, -L.w, L.w);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+  }
+}
+
+registerTower('flame', FlameTower);
+void FlameTower;
+
+
+/* ==== js/entities/towers/LaserTower.js ==== */
+/* ==========================================================================
+   LaserTower.js — лазер ($40, апгрейд $30).
+
+   Непрерывный луч: бьёт мгновенно и ПРОШИВАЕТ всех врагов на линии
+   (в отличие от пули гатлинга, которая летит в одну цель). 5 импульсов/с
+   × 25/50/90 → 125/250/450 DPS, и урон нарастает, пока луч держит цель:
+   множитель растёт на rampPerSec в секунду вплоть до rampMax (×2).
+   Достаёт и воздух. Пробивает 25% брони (энергетический урон).
+   ========================================================================== */
+
+
+const BEAM_HALF_WIDTH = 7;   // половина толщины луча в пикселях
+
+class LaserTower extends Tower {
+  constructor(game, def, cx, cy) {
+    super(game, def, cx, cy);
+    this.ramp = 1;            // текущий множитель урона (1 … rampMax)
+    this.holdTime = 0;        // сколько секунд непрерывно держим цель
+    this.beamT = 0;           // время отрисовки луча
+    this.beamX2 = 0;
+    this.beamY2 = 0;
+    this.beamHits = 0;
+    this.lastTarget = null;   // цель, которую луч держал на предыдущем импульсе
+  }
+
+  get turretPivot() { return [26, 27]; }
+
+  /** Точка, откуда выходит луч (срез кристалла) */
+  emitter() {
+    const ex = this.x + Math.cos(this.angle) * 20;
+    const ey = this.y - 15 + Math.sin(this.angle) * 20;
+    return { x: ex, y: ey };
+  }
+
+  fire(target) {
+    const g = this.game;
+    const d = this.def;
+    const e0 = this.emitter();
+    // конец луча — на максимальной дистанции по направлению ствола
+    const ex = e0.x + Math.cos(this.angle) * this.range;
+    const ey = e0.y + Math.sin(this.angle) * this.range;
+
+    // ВАЖНО: попадания считаем в ПЛОСКОСТИ ЗЕМЛИ (от центра башни), а не от
+    // среза кристалла. Иначе луч, выпущенный на 15 px выше земли, проходил бы
+    // над мелкими наземными врагами (радиус 8 px) и не наносил урона.
+    const gx1 = this.x, gy1 = this.y;
+    const gx2 = this.x + Math.cos(this.angle) * this.range;
+    const gy2 = this.y + Math.sin(this.angle) * this.range;
+
+    // Множитель нарастает, пока держим одну и ту же цель. Нельзя сравнивать
+    // с this.target: базовый update() присваивает его ДО вызова fire(), поэтому
+    // ведём отдельную ссылку на цель предыдущего импульса.
+    if (this.lastTarget === target) {
+      this.holdTime += this.interval;
+    } else {
+      this.holdTime = 0;
+      this.lastTarget = target;
+    }
+    this.ramp = clamp(1 + this.holdTime * (d.rampPerSec || 0.05), 1, d.rampMax || 2);
+    const dmg = this.damage * this.ramp;
+
+    this.beamT = Math.max(this.beamT, 0.13);
+    this.beamX2 = ex; this.beamY2 = ey;
+
+    // прошиваем всех на линии луча
+    const list = g.collision.queryCircle(this.x, this.y, this.range, !this.canTargetAir);
+    let hits = 0;
+    for (let i = 0; i < list.length; i++) {
+      const en = list[i];
+      if (!this.canTarget(en)) continue;
+      const dd = dist(gx1, gy1, en.x, en.y);
+      if (dd > this.range + en.radius) continue;
+      // расстояние от врага до отрезка луча (в плоскости земли)
+      if (distToSegment(en.x, en.y, gx1, gy1, gx2, gy2) > BEAM_HALF_WIDTH + en.radius) continue;
+
+      g.damageEnemy(en, dmg, d.damageType, { pierceArmor: d.pierceArmor || 0.25, source: this });
+      hits++;
+      g.particles.burst(en.x, en.y, {
+        count: 3, colors: ['#ffffff', '#ff5ad1', '#c77dff'],
+        speed: [30, 110], life: [0.1, 0.24], size: [0.8, 2], type: PT.SPARK, drag: 4
+      });
+    }
+    this.beamHits = hits;
+
+    // сноп искр в конце луча
+    g.effects.spawn(FX.MUZZLE, {
+      x: e0.x, y: e0.y, angle: this.angle, size: 7 + this.level * 1.6,
+      life: 0.1, color: '#ff9ae6'
+    });
+    if (hits > 0) {
+      g.particles.emit(ex, ey, randRange(-20, 20), randRange(-20, 20),
+        0.2, 2.2, '#ff5ad1', PT.SPARK, 4, 0);
+    }
+    g.audio?.play('laser', { priority: hits > 2 ? 2 : 1 });
+  }
+
+  update(dt) {
+    super.update(dt);
+    if (this.beamT > 0) this.beamT = Math.max(0, this.beamT - dt);
+    // Цель потеряна — нарастание сбрасывается, свечение плавно затухает.
+    if (!this.target) {
+      this.holdTime = 0;
+      this.lastTarget = null;
+      this.ramp = Math.max(1, this.ramp - dt * 0.8);
+    }
+  }
+
+  render(g, time) {
+    super.render(g, time);
+
+    // свечение кристалла — тем сильнее, чем выше накопленный множитель
+    const e0 = this.emitter();
+    const glow = 0.25 + 0.35 * ((this.ramp - 1) / Math.max(0.001, (this.def.rampMax || 2) - 1));
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = glow + 0.1 * Math.sin(this.pulse * 3);
+    const rg = g.createRadialGradient(e0.x, e0.y, 0.5, e0.x, e0.y, 9 + this.level);
+    rg.addColorStop(0, 'rgba(255,255,255,0.9)');
+    rg.addColorStop(0.4, 'rgba(255,90,209,0.6)');
+    rg.addColorStop(1, 'rgba(255,90,209,0)');
+    g.fillStyle = rg;
+    g.beginPath(); g.arc(e0.x, e0.y, 9 + this.level, 0, Math.PI * 2); g.fill();
+    g.restore();
+
+    // сам луч
+    if (this.beamT <= 0) return;
+    const k = clamp(this.beamT / 0.13, 0, 1);
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.lineCap = 'round';
+
+    // внешнее гало
+    g.globalAlpha = 0.30 * k;
+    g.strokeStyle = '#ff5ad1';
+    g.lineWidth = 8 + this.level * 1.5;
+    g.beginPath(); g.moveTo(e0.x, e0.y); g.lineTo(this.beamX2, this.beamY2); g.stroke();
+
+    // середина
+    g.globalAlpha = 0.65 * k;
+    g.strokeStyle = '#ffa6ec';
+    g.lineWidth = 3.4;
+    g.beginPath(); g.moveTo(e0.x, e0.y); g.lineTo(this.beamX2, this.beamY2); g.stroke();
+
+    // горячее ядро
+    g.globalAlpha = 0.95 * k;
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(e0.x, e0.y); g.lineTo(this.beamX2, this.beamY2); g.stroke();
+
+    // отметки попаданий вдоль луча
+    if (this.beamHits > 0) {
+      g.globalAlpha = 0.5 * k;
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < Math.min(6, this.beamHits); i++) {
+        const t = (i + 1) / (Math.min(6, this.beamHits) + 1);
+        const px = e0.x + (this.beamX2 - e0.x) * t;
+        const py = e0.y + (this.beamY2 - e0.y) * t;
+        g.beginPath(); g.arc(px, py, 3.2, 0, Math.PI * 2); g.fill();
+      }
+    }
+    g.restore();
+    void time;
+  }
+
+  /** Индикатор накопленного урона под башней (видно, что луч «разогревается») */
+  renderRange(g, color, fill) {
+    super.renderRange(g, color, fill);
+    const r = (this.ramp - 1) / Math.max(0.001, (this.def.rampMax || 2) - 1);
+    if (r <= 0.02) return;
+    g.save();
+    g.strokeStyle = 'rgba(255,90,209,0.9)';
+    g.lineWidth = 3;
+    g.beginPath();
+    g.arc(this.x, this.y + 10, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(r, 0, 1));
+    g.stroke();
+    g.restore();
+  }
+}
+
+registerTower('laser', LaserTower);
+void LaserTower;
+
+
+/* ==== js/entities/towers/HiveTower.js ==== */
+/* ==========================================================================
+   HiveTower.js — улей ($30, апгрейд $20).
+
+   Групповой урон: раз в секунду выпускает рой из 3/5/8 пчёл, каждая летит
+   в СВОЮ цель (хоуминг), поэтому улей накрывает сразу нескольких врагов —
+   в том числе воздушных. Пчела наносит 53/64/60 урона и возвращается в улей
+   (возврат уже реализован в пуле снарядов: p.returning, homeX/homeY).
+   Слаб против одной жирной цели, силён против толпы — зеркало клея.
+   ========================================================================== */
+
+
+class HiveTower extends Tower {
+  get turretPivot() { return [24, 28]; }
+
+  /**
+   * Цели для роя: берём столько разных врагов, сколько пчёл.
+   * Если врагов меньше — добиваем рой по ближайшим (чтобы урон не пропадал).
+   */
+  pickTargets(count) {
+    const g = this.game;
+    const list = g.collision.queryCircle(this.x, this.y, this.range, !this.canTargetAir);
+    const pool = [];
+    for (let i = 0; i < list.length; i++) {
+      if (this.canTarget(list[i])) pool.push(list[i]);
+    }
+    if (!pool.length) return [];
+    // сортировка по «продвинутости»: самые опасные (ближе к выходу) первыми
+    pool.sort((a, b) => b.progress - a.progress);
+
+    const out = [];
+    for (let k = 0; k < count; k++) {
+      out.push(pool[k % pool.length]);
+    }
+    return out;
+  }
+
+  fire(target) {
+    const g = this.game;
+    const d = this.def;
+    const count = Math.max(1, this.bees || 1);
+    const targets = this.pickTargets(count);
+    const hx = this.x + 12;          // леток справа от корпуса
+    const hy = this.y - 12;
+
+    for (let i = 0; i < targets.length; i++) {
+      const tgt = targets[i];
+      // пчёлы вылетают не из одной точки, а «веером» из летка
+      const a = randRange(-0.5, 0.5);
+      g.projectiles.spawn({
+        type: 3 /* PROJ.BEE */,
+        x: hx + Math.cos(a) * 4,
+        y: hy + Math.sin(a) * 4,
+        target: tgt,
+        speed: 165 + this.level * 12,
+        turn: 5.2,
+        damage: this.damage,
+        damageType: d.damageType,
+        owner: this,
+        size: 0.9 + this.level * 0.08,
+        life: 4,
+        hitRadius: 6,
+        homeX: hx, homeY: hy        // куда пчела вернётся после укуса
+      });
+    }
+
+    // если целей не нашлось — просто «жужжим» впустую (выстрел всё равно засчитан)
+    if (!targets.length && target) {
+      g.projectiles.spawn({
+        type: 3, x: hx, y: hy, target,
+        speed: 165, turn: 5.2, damage: this.damage,
+        damageType: d.damageType, owner: this, life: 4, hitRadius: 6,
+        homeX: hx, homeY: hy
+      });
+    }
+
+    g.particles.burst(hx, hy, {
+      count: 4 + count, colors: ['#ffe66d', '#c9a227', '#fff6c9'],
+      speed: [18, 62], life: [0.16, 0.4], size: [1, 2.2], gravity: -14, drag: 2, type: PT.DOT
+    });
+    g.effects.spawn(FX.MUZZLE, {
+      x: hx, y: hy, angle: this.angle, size: 6 + this.level, life: 0.12, color: '#ffe66d'
+    });
+    g.audio?.play('bee', { priority: count > 5 ? 2 : 1 });
+  }
+
+  /** Рой над ульем — декоративное жужжание, показывает что башня живая */
+  render(g, time) {
+    super.render(g, time);
+    const bees = 1 + this.level;
+    g.save();
+    for (let i = 0; i < bees; i++) {
+      const a = time * (1.1 + i * 0.23) + i * 2.1;
+      const r = 15 + i * 3.4 + Math.sin(time * 2 + i) * 1.6;
+      const bx = this.x + Math.cos(a) * r;
+      const by = this.y - 16 + Math.sin(a) * r * 0.42;
+      g.globalAlpha = 0.75;
+      g.fillStyle = '#ffe66d';
+      g.beginPath(); g.ellipse(bx, by, 2.1, 1.5, a, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.35;
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.ellipse(bx, by - 1.6, 1.7, 0.9, 0, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  }
+
+  /** Радиус улья показываем чуть мягче: рой летит по дуге, а не по прямой */
+  renderRange(g, color, fill) {
+    super.renderRange(g, color || 'rgba(255,230,109,0.85)', fill || 'rgba(255,214,80,0.10)');
+    // отметим, сколько пчёл в рое — полезно при выборе башни
+    const n = this.bees || 0;
+    if (!n) return;
+    g.save();
+    g.fillStyle = 'rgba(255,230,109,0.95)';
+    g.font = '700 11px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.fillText(`рой: ${n}`, this.x, this.y - 34);
+    g.restore();
+  }
+}
+
+registerTower('hive', HiveTower);
+void HiveTower;
+
+
+/* ==== js/entities/towers/NukeTower.js ==== */
+/* ==========================================================================
+   NukeTower.js — ядерная мортира ($120, апгрейд $90).
+
+   Самая дорогая и самая медленная башня: 0.2/0.25/0.3 выстрела в секунду
+   (перезарядка 5 / 4 / 3.3 с), зато 280/560/840 урона по огромной площади
+   2.0/2.5/3.25 тайла. Ключевая особенность — ослабленный эпицентр: в радиусе
+   0.5/0.6/0.7 тайла от точки разрыва проходит только 25% урона, поэтому
+   мортиру выгоднее ставить так, чтобы дорога шла по кольцу поражения.
+   Мина самонаводится, летит по навесной траектории и достаёт воздух.
+   ========================================================================== */
+
+
+class NukeTower extends Tower {
+  constructor(game, def, cx, cy) {
+    super(game, def, cx, cy);
+    this.innerGap = def.innerGap ? def.innerGap[0] : 0;
+    this.chargeGlow = 0;      // 0 → 1: насколько заряжен следующий выстрел
+  }
+
+  get turretPivot() { return [26, 30]; }
+
+  applyLevel() {
+    super.applyLevel();
+    const i = this.level - 1;
+    if (this.def.innerGap) this.innerGap = this.def.innerGap[i];
+  }
+
+  fire(target) {
+    const g = this.game;
+    const d = this.def;
+    const a = this.angle - 0.34;                 // ствол задран вверх
+    const mx = this.x + Math.cos(this.angle) * 20;
+    const my = this.y - 12 + Math.sin(this.angle) * 20;
+
+    g.projectiles.spawn({
+      type: 4 /* PROJ.SHELL */,
+      x: mx, y: my,
+      target,
+      angle: a,
+      speed: d.projSpeed || 195,
+      turn: d.projTurn || 2.6,                   // мина доворачивает лениво
+      damage: this.damage,
+      splash: this.splash,
+      innerGap: this.innerGap,                   // «пустой центр» взрыва
+      gapRatio: d.gapDamageRatio ?? 0.25,        // доля урона в эпицентре
+      damageType: d.damageType,
+      pierceArmor: d.pierceArmor || 0,
+      owner: this,
+      size: 1 + this.level * 0.12,
+      life: 3.4,
+      hitRadius: 7
+    });
+
+    // выхлоп и дым из ствола
+    g.particles.burst(mx, my, {
+      count: 14, colors: ['#d8d8d8', '#9a9a9a', '#c6ff4f'],
+      speed: [20, 90], life: [0.4, 1.0], size: [2.6, 6.5],
+      gravity: -16, drag: 2, type: PT.SMOKE, dir: a + Math.PI, spread: 0.8
+    });
+    g.particles.burst(mx, my, {
+      count: 8, colors: ['#fff0b0', '#c6ff4f'],
+      speed: [40, 150], life: [0.12, 0.3], size: [1, 2.4], type: PT.SPARK, drag: 4
+    });
+    g.effects.spawn(FX.MUZZLE, {
+      x: mx, y: my, angle: a, size: 14 + this.level * 2, life: 0.16, color: '#dfffb0'
+    });
+    g.effects.spawn(FX.SHOCKWAVE, {
+      x: mx, y: my, size: 6, size2: 26, life: 0.3,
+      color: 'rgba(200,200,200,0.5)', width: 2
+    });
+
+    // отдача у мортиры заметная
+    this.recoil = (d.recoil ?? 3) + this.level;
+    g.camera?.shake(clamp(d.shake || 6, 1, 12) * 0.35, 0.16);
+    g.audio?.play('nuke', { big: false, priority: 2 });
+    this.chargeGlow = 0;
+  }
+
+  update(dt) {
+    super.update(dt);
+    // индикатор перезарядки: 0 — только что выстрелили, 1 — готов
+    const total = Math.max(0.001, this.interval);
+    this.chargeGlow = clamp(1 - this.cooldown / total, 0, 1);
+    if (this.chargeGlow >= 1 && Math.random() < dt * 2.2) {
+      // заряд «подрагивает» готовностью
+      const gx = this.x + Math.cos(this.angle - 0.34) * 22;
+      const gy = this.y - 12 + Math.sin(this.angle - 0.34) * 22;
+      this.game.particles.emit(gx + randRange(-2, 2), gy + randRange(-2, 2),
+        randRange(-6, 6), randRange(-16, -6), randRange(0.3, 0.6),
+        randRange(1.4, 2.6), '#c6ff4f', PT.SMOKE, 3, -8);
+    }
+  }
+
+  render(g, time) {
+    super.render(g, time);
+
+    // дуга перезарядки у основания — видно, когда мортира готова
+    const k = clamp(this.chargeGlow, 0, 1);
+    if (k < 0.02) return;
+    g.save();
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(0,0,0,0.35)';
+    g.beginPath();
+    g.arc(this.x, this.y + 12, 13, Math.PI * 0.15, Math.PI * 0.85);
+    g.stroke();
+    g.strokeStyle = k >= 1 ? '#c6ff4f' : 'rgba(198,255,79,0.65)';
+    g.beginPath();
+    g.arc(this.x, this.y + 12, 13, Math.PI * 0.15, Math.PI * 0.15 + Math.PI * 0.7 * k);
+    g.stroke();
+    if (k >= 1) {
+      g.globalAlpha = 0.35 + 0.25 * Math.sin(time * 6);
+      g.fillStyle = '#c6ff4f';
+      g.beginPath(); g.arc(this.x, this.y + 12, 3, 0, Math.PI * 2); g.fill();
+    }
+    g.restore();
+  }
+
+  /**
+   * Радиус показываем как «пончик»: внешний круг — зона поражения,
+   * внутренний — ослабленный эпицентр. Это главная подсказка для игрока:
+   * мортиру надо ставить так, чтобы дорога шла ПО КОЛЬЦУ, а не через центр.
+   */
+  renderRange(g, color, fill) {
+    super.renderRange(g, color || 'rgba(198,255,79,0.8)', fill || 'rgba(198,255,79,0.07)');
+    if (!this.innerGap) return;
+    g.save();
+    // ослабленный эпицентр
+    g.fillStyle = 'rgba(20,32,20,0.55)';
+    g.beginPath();
+    g.arc(this.x, this.y, this.innerGap, 0, Math.PI * 2);
+    g.fill();
+    g.setLineDash([4, 4]);
+    g.strokeStyle = 'rgba(230,255,200,0.85)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(this.x, this.y, this.innerGap, 0, Math.PI * 2);
+    g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = 'rgba(230,255,200,0.9)';
+    g.font = '700 10px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.fillText('эпицентр: −75%', this.x, this.y + 3);
+    g.restore();
+  }
+}
+
+registerTower('nuke', NukeTower);
+void NukeTower;
 
 
 /* ==== js/entities/towers/index.js ==== */
@@ -6052,6 +6917,28 @@ class SaveSystem {
 
   isTowerUnlocked(id) { return this.data.unlockedTowers.includes(id); }
 
+  /**
+   * Синхронизация разблокировок: открыть все башни, чей порог по звёздам достигнут.
+   * Вызывается при загрузке сохранения и после каждой записи результата, поэтому
+   * игрок получает башню сразу, как только накопил звёзды (без отдельного экрана магазина).
+   * Возвращает список только что открытых id — им можно показать тост.
+   */
+  syncUnlocks(defs) {
+    const stars = this.totalStars();
+    const fresh = [];
+    for (const id of Object.keys(defs)) {
+      const d = defs[id];
+      const need = d.unlock || 0;
+      if (need <= 0) continue;
+      if (stars < need) continue;
+      if (this.data.unlockedTowers.includes(id)) continue;
+      this.data.unlockedTowers.push(id);
+      fresh.push(id);
+    }
+    if (fresh.length) this.save();
+    return fresh;
+  }
+
   unlockTower(id) {
     if (!this.data.unlockedTowers.includes(id)) {
       this.data.unlockedTowers.push(id);
@@ -7282,6 +8169,384 @@ function roundRectPath(c, x, y, w, h, r) {
 void RenderSystem;
 
 
+/* ==== js/maps/map_grasslands.js ==== */
+/* ==========================================================================
+   map_grasslands.js — карта 1 «Зелёная долина» (обучающая).
+
+   Сетка 20×12, один вход слева, один выход справа, фиксированная дорога
+   с несколькими поворотами и много места под застройку. Первые волны —
+   только наземные враги, вертолёты появляются с 5-й волны.
+
+   Формат путевых точек: [[cx, cy], ...] — разворачиваются в плотный список
+   клеток без диагоналей (см. GridSystem._expandPath).
+   ========================================================================== */
+
+const map_grasslands = {
+  id: 'grasslands',
+  name: 'Зелёная долина',
+  en: 'Green Valley',
+  biome: 'grass',
+  mode: 'fixed',           // фиксированная дорога
+  maze: false,
+  cols: 20,
+  rows: 12,
+  seed: 20250101,
+
+  startMoney: 100,
+  lives: 20,
+  waves: 20,
+  firstBreak: 25,          // время на первую застройку
+  difficulty: 1,
+
+  entries: [[0, 6]],
+  exits: [[19, 4]],
+
+  // Дорога: вход слева → вверх → вправо → вниз → вправо → вверх → выход
+  path: [
+    [0, 6], [3, 6], [3, 2], [8, 2], [8, 9], [14, 9], [14, 4], [19, 4]
+  ],
+
+  // Зоны, где строить нельзя (пруда/камни рисуются отдельной текстурой)
+  zones: [
+    { x: 16, y: 7, w: 3, h: 3, kind: 'water' },
+    { x: 1, y: 9, w: 2, h: 2, kind: 'rock' }
+  ],
+
+  // Декор (занимает клетку, строить нельзя)
+  decor: [
+    { cx: 1, cy: 1, type: 'tree' },
+    { cx: 6, cy: 0, type: 'pine' },
+    { cx: 11, cy: 1, type: 'tree' },
+    { cx: 17, cy: 1, type: 'pine' },
+    { cx: 12, cy: 6, type: 'tree' },
+    { cx: 5, cy: 5, type: 'bush' },
+    { cx: 6, cy: 7, type: 'bush' },
+    { cx: 10, cy: 4, type: 'bush' },
+    { cx: 16, cy: 2, type: 'bush' },
+    { cx: 2, cy: 3, type: 'flower', solid: false },
+    { cx: 4, cy: 8, type: 'flower', solid: false },
+    { cx: 7, cy: 4, type: 'flower', solid: false },
+    { cx: 11, cy: 7, type: 'flower', solid: false },
+    { cx: 13, cy: 2, type: 'flower', solid: false },
+    { cx: 18, cy: 9, type: 'flower', solid: false },
+    { cx: 9, cy: 11, type: 'tree' },
+    { cx: 19, cy: 10, type: 'pine' },
+    { cx: 3, cy: 11, type: 'bush' },
+    { cx: 15, cy: 11, type: 'rock' }
+  ],
+
+  // Ручной сценарий первых волн (дальше работает генератор WaveSystem)
+  waveOverrides: {
+    1: [
+      { type: 'soldier', count: 6, interval: 0.9, delay: 0, entry: 0 }
+    ],
+    2: [
+      { type: 'soldier', count: 9, interval: 0.7, delay: 0, entry: 0 }
+    ],
+    3: [
+      { type: 'soldier', count: 8, interval: 0.6, delay: 0, entry: 0 },
+      { type: 'runner', count: 4, interval: 0.5, delay: 4, entry: 0 }
+    ],
+    4: [
+      { type: 'soldier', count: 10, interval: 0.5, delay: 0, entry: 0 },
+      { type: 'runner', count: 6, interval: 0.45, delay: 3, entry: 0 }
+    ],
+    5: [
+      { type: 'soldier', count: 8, interval: 0.55, delay: 0, entry: 0 },
+      { type: 'copter', count: 3, interval: 1.6, delay: 2, entry: 0 }
+    ],
+    6: [
+      { type: 'runner', count: 10, interval: 0.4, delay: 0, entry: 0 },
+      { type: 'biker', count: 3, interval: 1.1, delay: 5, entry: 0 }
+    ],
+    7: [
+      { type: 'soldier', count: 12, interval: 0.45, delay: 0, entry: 0 },
+      { type: 'tank', count: 1, interval: 1, delay: 6, entry: 0 }
+    ],
+    8: [
+      { type: 'biker', count: 6, interval: 0.7, delay: 0, entry: 0 },
+      { type: 'copter', count: 4, interval: 1.3, delay: 4, entry: 0 }
+    ],
+    9: [
+      { type: 'soldier', count: 14, interval: 0.4, delay: 0, entry: 0 },
+      { type: 'transport', count: 2, interval: 3, delay: 5, entry: 0 }
+    ]
+    // волна 10 — босс: генерируется WaveSystem автоматически
+  },
+
+  tips: 'Дорога фиксирована: ставьте башни на поворотах — там враги дольше всего под огнём.'
+};
+
+void map_grasslands;
+
+
+/* ==== js/maps/map_desert.js ==== */
+/* ==========================================================================
+   map_desert.js — карта 2 «Песчаный карьер» (maze-building).
+
+   Сетка 24×14, пустыня. Фиксированной дороги НЕТ: враги идут кратчайшим
+   маршрутом, который пересчитывается после каждой построенной башни.
+   Игрок сам строит лабиринт — классический barrage-геймплей.
+   Скальные зоны задают «каркас», вокруг которого удобно вить maze.
+   ========================================================================== */
+
+const map_desert = {
+  id: 'desert',
+  name: 'Песчаный карьер',
+  en: 'Sand Quarry',
+  biome: 'desert',
+  mode: 'maze',
+  maze: true,
+  cols: 24,
+  rows: 14,
+  seed: 771203,
+
+  startMoney: 160,
+  lives: 20,
+  waves: 20,
+  firstBreak: 35,          // на постройку лабиринта нужно больше времени
+  difficulty: 1.05,
+
+  entries: [[0, 7]],
+  exits: [[23, 6]],
+
+  // Скальные массивы: строить нельзя, враги обходят
+  zones: [
+    { x: 5, y: 2, w: 2, h: 4, kind: 'rock' },
+    { x: 5, y: 9, w: 2, h: 4, kind: 'rock' },
+    { x: 11, y: 5, w: 2, h: 5, kind: 'rock' },
+    { x: 17, y: 1, w: 2, h: 4, kind: 'rock' },
+    { x: 17, y: 10, w: 2, h: 3, kind: 'rock' }
+  ],
+
+  decor: [
+    { cx: 2, cy: 2, type: 'cactus' },
+    { cx: 3, cy: 11, type: 'cactus' },
+    { cx: 9, cy: 1, type: 'cactus' },
+    { cx: 14, cy: 12, type: 'cactus' },
+    { cx: 20, cy: 6, type: 'cactus' },
+    { cx: 21, cy: 2, type: 'rock' },
+    { cx: 8, cy: 12, type: 'rock' },
+    { cx: 15, cy: 1, type: 'rock' },
+    { cx: 1, cy: 5, type: 'bush' },
+    { cx: 22, cy: 11, type: 'bush' },
+    { cx: 12, cy: 1, type: 'barrel' },
+    { cx: 13, cy: 12, type: 'barrel' }
+  ],
+
+  tips: 'Дороги нет: стройте лабиринт башнями. Нельзя полностью перекрыть путь — игра не даст.'
+};
+
+void map_desert;
+
+
+/* ==== js/maps/map_magma.js ==== */
+/* ==========================================================================
+   map_magma.js — карта 3 «Расколотый кратер».
+
+   Сетка 22×13, вулканический биом. Фиксированная дорога, но ДВА входа:
+   основной слева сверху и запасной снизу — враги выходят на маршрут
+   с середины, поэтому оборону приходится тянуть вдоль всей дороги.
+   Лавовые зоны не просто декор: они пульсируют и сужают место под застройку.
+
+   Путевые точки идут строго по строкам/столбцам (без диагоналей) —
+   их разворачивает GridSystem._expandPath.
+   ========================================================================== */
+
+const map_magma = {
+  id: 'magma',
+  name: 'Расколотый кратер',
+  en: 'Fractured Crater',
+  biome: 'lava',
+  mode: 'fixed',
+  maze: false,
+  cols: 22,
+  rows: 13,
+  seed: 410872,
+
+  startMoney: 140,
+  lives: 20,
+  waves: 20,
+  firstBreak: 28,
+  difficulty: 1.12,
+
+  // Основной вход слева сверху; второй — снизу, прямо на дороге
+  entries: [[0, 2], [8, 12]],
+  exits: [[21, 6]],
+
+  // Дорога: влево-вниз-вправо-вверх-вправо. Точка [8,12] — второй вход.
+  path: [
+    [0, 2], [8, 2], [8, 12], [16, 12], [16, 6], [21, 6]
+  ],
+
+  // Лавовые озёра и каменные гряды: строить нельзя, враги не проходят
+  zones: [
+    { x: 2, y: 5, w: 3, h: 3, kind: 'lava' },
+    { x: 11, y: 3, w: 3, h: 2, kind: 'lava' },
+    { x: 18, y: 9, w: 3, h: 3, kind: 'lava' },
+    { x: 12, y: 8, w: 3, h: 3, kind: 'rock' },
+    { x: 3, y: 9, w: 2, h: 2, kind: 'rock' },
+    { x: 19, y: 2, w: 2, h: 2, kind: 'rock' }
+  ],
+
+  decor: [
+    { cx: 5, cy: 0, type: 'rock' },
+    { cx: 12, cy: 1, type: 'rock' },
+    { cx: 16, cy: 3, type: 'rock' },
+    { cx: 20, cy: 5, type: 'rock' },
+    { cx: 6, cy: 8, type: 'rock' },
+    { cx: 10, cy: 6, type: 'rock' },
+    { cx: 2, cy: 11, type: 'rock' },
+    { cx: 11, cy: 7, type: 'barrel' },
+    { cx: 18, cy: 7, type: 'barrel' },
+    { cx: 6, cy: 4, type: 'barrel' },
+    { cx: 14, cy: 6, type: 'rock' },
+    { cx: 1, cy: 6, type: 'rock' }
+  ],
+
+  // Первые волны — ручной сценарий: знакомим со вторым входом
+  waveOverrides: {
+    1: [
+      { type: 'soldier', count: 7, interval: 0.85, delay: 0, entry: 0 }
+    ],
+    2: [
+      { type: 'soldier', count: 8, interval: 0.7, delay: 0, entry: 0 },
+      { type: 'runner', count: 4, interval: 0.5, delay: 4, entry: 1 }
+    ],
+    3: [
+      { type: 'biker', count: 4, interval: 1.0, delay: 0, entry: 0 },
+      { type: 'soldier', count: 8, interval: 0.6, delay: 2, entry: 1 }
+    ],
+    4: [
+      { type: 'soldier', count: 12, interval: 0.5, delay: 0, entry: 0 },
+      { type: 'copter', count: 3, interval: 1.5, delay: 5, entry: 1 }
+    ]
+  },
+
+  tips: 'Два входа: второй открывается на 2-й волне снизу. Держите под огнём оба участка дороги.'
+};
+
+void map_magma;
+
+
+/* ==== js/maps/map_city.js ==== */
+/* ==========================================================================
+   map_city.js — карта 4 «Мёртвый город» (maze-building, максимальная сложность).
+
+   Сетка 26×15, городской биом. Фиксированной дороги нет: враги идут
+   кратчайшим маршрутом, который пересчитывается после каждой башни.
+   Кварталы-руины задают каркас, между ними — коридоры шириной в одну-две
+   клетки, из которых и собирается лабиринт.
+
+   Два входа (слева и сверху) при одном выходе: давить приходится два
+   направления сразу, зато длинный общий коридор у выхода кормит DPS-башни.
+   ========================================================================== */
+
+const map_city = {
+  id: 'city',
+  name: 'Мёртвый город',
+  en: 'Dead City',
+  biome: 'city',
+  mode: 'maze',
+  maze: true,
+  cols: 26,
+  rows: 15,
+  seed: 903417,
+
+  startMoney: 190,
+  lives: 20,
+  waves: 20,
+  firstBreak: 40,          // лабиринт на 26×15 требует времени на застройку
+  difficulty: 1.2,
+
+  entries: [[0, 7], [13, 0]],
+  exits: [[25, 7]],
+
+  // Кварталы-руины: непроходимые и незастраиваемые прямоугольники
+  zones: [
+    { x: 3, y: 2, w: 3, h: 3, kind: 'rock' },
+    { x: 3, y: 10, w: 3, h: 3, kind: 'rock' },
+    { x: 9, y: 2, w: 3, h: 4, kind: 'rock' },
+    { x: 9, y: 10, w: 3, h: 3, kind: 'rock' },
+    { x: 15, y: 3, w: 4, h: 3, kind: 'rock' },
+    { x: 15, y: 9, w: 4, h: 3, kind: 'rock' },
+    { x: 21, y: 2, w: 2, h: 4, kind: 'rock' },
+    { x: 21, y: 10, w: 2, h: 3, kind: 'rock' }
+  ],
+
+  decor: [
+    // уцелевшие здания по краям карты
+    { cx: 1, cy: 1, type: 'building.0' },
+    { cx: 6, cy: 13, type: 'building.1' },
+    { cx: 24, cy: 1, type: 'building.2' },
+    { cx: 24, cy: 13, type: 'building.0' },
+    { cx: 13, cy: 13, type: 'building.1' },
+    // обломки и бочки в коридорах
+    { cx: 7, cy: 7, type: 'rock' },
+    { cx: 13, cy: 7, type: 'barrel' },
+    { cx: 19, cy: 7, type: 'barrel' },
+    { cx: 2, cy: 12, type: 'rock' },
+    { cx: 12, cy: 2, type: 'rock' },
+    { cx: 20, cy: 12, type: 'rock' },
+    { cx: 17, cy: 1, type: 'barrel' },
+    { cx: 8, cy: 12, type: 'barrel' }
+  ],
+
+  // Первые волны — только левый вход, чтобы игрок успел заложить каркас
+  waveOverrides: {
+    1: [
+      { type: 'soldier', count: 8, interval: 0.8, delay: 0, entry: 0 }
+    ],
+    2: [
+      { type: 'soldier', count: 8, interval: 0.65, delay: 0, entry: 0 },
+      { type: 'runner', count: 5, interval: 0.45, delay: 4, entry: 1 }
+    ],
+    3: [
+      { type: 'biker', count: 5, interval: 0.9, delay: 0, entry: 1 },
+      { type: 'soldier', count: 10, interval: 0.55, delay: 2, entry: 0 }
+    ]
+  },
+
+  tips: 'Два входа и один выход. Стройте лабиринт так, чтобы оба потока сливались в общий длинный коридор — там и ставьте ударные башни.'
+};
+
+void map_city;
+
+
+/* ==== js/maps/MapData.js ==== */
+/* ==========================================================================
+   MapData.js — реестр карт и порядок их открытия.
+   Карта N открывается после прохождения карты N-1 (хотя бы 1 звезда).
+   ========================================================================== */
+
+
+/** Порядок карт в меню выбора */
+const MAP_ORDER = ['grasslands', 'desert', 'magma', 'city'];
+
+const MAPS = {
+  grasslands: map_grasslands,
+  desert: map_desert,
+  magma: map_magma,
+  city: map_city
+};
+
+function getMap(id) {
+  return MAPS[id] || MAPS[MAP_ORDER[0]];
+}
+
+/** Карта, которая открывается после указанной (или null) */
+function nextMapId(id) {
+  const i = MAP_ORDER.indexOf(id);
+  if (i < 0 || i >= MAP_ORDER.length - 1) return null;
+  return MAP_ORDER[i + 1];
+}
+
+/** Сколько всего карт */
+function mapCount() { return MAP_ORDER.length; }
+
+void { MAPS, MAP_ORDER, getMap, nextMapId, mapCount };
+
+
 /* ==== js/scenes/Scene.js ==== */
 /* ==========================================================================
    Scene.js — базовый класс сцены.
@@ -8002,6 +9267,15 @@ class GameOverScene extends Scene {
     Draw.text(g, p.won ? 'Все волны отбиты, база устояла' : 'База пала — враги прорвались',
       w / 2, box.y + 64, { size: 13, align: 'center', color: '#9fd0ff', weight: 700 });
 
+    // только что открытые звёздами башни — сразу показываем награду игроку
+    const unlockedNames = (p.unlocked || [])
+      .map((id) => TOWER_DEFS[id]?.name || id)
+      .filter(Boolean);
+    if (unlockedNames.length) {
+      Draw.text(g, `Новая башня: ${unlockedNames.join(', ')}`,
+        w / 2, box.y + 82, { size: 12, align: 'center', color: '#ffd23f', weight: 800 });
+    }
+
     // звёзды
     const starY = box.y + 100;
     for (let i = 0; i < 3; i++) {
@@ -8073,8 +9347,7 @@ class GameOverScene extends Scene {
 }
 
 function mapName(id) {
-  const names = { grasslands: 'Зелёная долина', desert: 'Песчаный карьер' };
-  return names[id] || id;
+  return MAPS[id]?.name || id;
 }
 
 void GameOverScene;
@@ -9230,7 +10503,9 @@ class GameScene extends Scene {
         const next = this.game.nextMapAfter(this.mapId);
         if (next) this.save.unlockMap(next);
       }
-      this.result = { won, stars, coins, leaks, best };
+      // звёзды могли открыть новую башню — сообщаем игроку
+      const fresh = this.save.syncUnlocks(TOWER_DEFS);
+      this.result = { won, stars, coins, leaks, best, unlocked: fresh };
     }
 
     this.game.pushScene(new GameOverScene(this.game, {
@@ -9302,7 +10577,8 @@ class GameScene extends Scene {
 
   /** Какие башни доступны игроку на этой карте */
   availableTowers() {
-    const allowed = this.mapDef.towers || PROTOTYPE_TOWERS;
+    // карта может ограничить набор полем towers; по умолчанию — весь каталог
+    const allowed = this.mapDef.towers || BUILD_ORDER;
     return allowed
       .map((id) => TOWER_DEFS[id])
       .filter((d) => d && this.isTowerAvailable(d.id));
@@ -9746,6 +11022,8 @@ class Game {
     document.addEventListener('visibilitychange', () => this.onVisibility());
 
     this.setDebug(!!this.save.settings.showFps);
+    // открыть башни, порог по звёздам которых уже достигнут (после загрузки сохранения)
+    this.save.syncUnlocks(TOWER_DEFS);
     this.replaceScene(new MenuScene(this));
     this.booted = true;
     return this;

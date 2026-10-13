@@ -126,6 +126,28 @@ export class SaveSystem {
 
   isTowerUnlocked(id) { return this.data.unlockedTowers.includes(id); }
 
+  /**
+   * Синхронизация разблокировок: открыть все башни, чей порог по звёздам достигнут.
+   * Вызывается при загрузке сохранения и после каждой записи результата, поэтому
+   * игрок получает башню сразу, как только накопил звёзды (без отдельного экрана магазина).
+   * Возвращает список только что открытых id — им можно показать тост.
+   */
+  syncUnlocks(defs) {
+    const stars = this.totalStars();
+    const fresh = [];
+    for (const id of Object.keys(defs)) {
+      const d = defs[id];
+      const need = d.unlock || 0;
+      if (need <= 0) continue;
+      if (stars < need) continue;
+      if (this.data.unlockedTowers.includes(id)) continue;
+      this.data.unlockedTowers.push(id);
+      fresh.push(id);
+    }
+    if (fresh.length) this.save();
+    return fresh;
+  }
+
   unlockTower(id) {
     if (!this.data.unlockedTowers.includes(id)) {
       this.data.unlockedTowers.push(id);

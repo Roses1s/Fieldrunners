@@ -16,6 +16,7 @@ import { TOWER_DEFS, towerTotalCost } from '../js/data/TowerData.js';
 import { MAP_ORDER, getMap } from '../js/maps/MapData.js';
 import { createTower } from '../js/entities/towers/index.js';
 import { createEnemy } from '../js/entities/enemies/index.js';
+import { SaveSystem } from '../js/systems/SaveSystem.js';
 
 let passed = 0, failed = 0;
 const fails = [];
@@ -40,6 +41,7 @@ class FakeSave {
   isTowerUnlocked() { return true; }
   unlockMap() { return false; }
   unlockTower() { return false; }
+  syncUnlocks() { return []; }
   recordResult() { return 0; }
   addKills() {}
   addCoins() {}
@@ -236,6 +238,110 @@ section('4. Механики башен: клей, ракета, тесла');
   ok(missileTower.shotsFired > 0 || scene.enemies.length === 0, `ракеты запускались: ${missileTower.shotsFired}`);
   const tesla = scene.towers.find((t) => t.id === 'tesla');
   ok(tesla.damageDealt > 0 || scene.enemies.length === 0, `тесла нанесла урон: ${Math.round(tesla.damageDealt)}`);
+}
+
+section('4.1 Механики новых башен: Пиро, Лазер, Улей, Ядерная');
+{
+  const { scene } = makeScene('grasslands');
+  const spawnAt = (def, x, y, mods = {}) => {
+    const e = createEnemy(scene, def, 0, 1, mods);
+    e.x = x; e.y = y; e.hp = e.maxHp;
+    scene.enemies.push(e);
+    return e;
+  };
+  const reset = () => {
+    scene.enemies.length = 0;
+    scene.projectiles.clear();
+    scene.effects.clear();
+    scene.particles.clear();
+  };
+  const makeTower = (id) => {
+    const t = createTower(scene, TOWER_DEFS[id], 5, 5);
+    t.level = 3;
+    t.applyLevel();
+    t.buildAnim = 0;
+    t.cooldown = 0;
+    t.angle = 0;
+    return t;
+  };
+
+  // Пиро: конус по наземным + поджог, вне конуса и по воздуху не бьёт
+  reset();
+  const flame = makeTower('flame');
+  const f1 = spawnAt(ENEMY_DEFS.soldier, flame.x + 26, flame.y, { hpMul: 100 });
+  const f2 = spawnAt(ENEMY_DEFS.soldier, flame.x + 44, flame.y + 12, { hpMul: 100 });
+  const fSide = spawnAt(ENEMY_DEFS.soldier, flame.x + 30, flame.y + 60, { hpMul: 100 });
+  const fAir = spawnAt(ENEMY_DEFS.copter, flame.x + 26, flame.y - 18, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  const fBefore = [f1.hp, f2.hp, fSide.hp, fAir.hp];
+  flame.fire(f1);
+  ok(f1.hp < fBefore[0] && f2.hp < fBefore[1], 'Пиро бьёт конусом сразу нескольких наземных');
+  ok(f1.burnDps === flame.burnDps && f1.burnTimer > 0, `Пиро поджигает: burn ${f1.burnDps}/с`);
+  ok(fSide.hp === fBefore[2] && fAir.hp === fBefore[3], 'Пиро не бьёт вне конуса и по воздуху');
+
+  // Лазер: прошивает линию, ramp растёт на одной цели и сбрасывается при смене
+  reset();
+  const laser = makeTower('laser');
+  const l1 = spawnAt(ENEMY_DEFS.soldier, laser.x + 30, laser.y, { hpMul: 100 });
+  const l2 = spawnAt(ENEMY_DEFS.runner, laser.x + 55, laser.y, { hpMul: 100 });
+  const lOff = spawnAt(ENEMY_DEFS.soldier, laser.x + 30, laser.y + 45, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  const lBefore = [l1.hp, l2.hp, lOff.hp];
+  laser.fire(l1);
+  ok(l1.hp < lBefore[0] && l2.hp < lBefore[1] && laser.beamHits >= 2, 'Лазер прошивает всех на линии');
+  ok(lOff.hp === lBefore[2], 'Лазер не бьёт мимо линии');
+  laser.fire(l1);
+  ok(laser.holdTime > 0 && laser.ramp > 1, `Лазер наращивает урон на одной цели: ×${laser.ramp.toFixed(2)}`);
+  const l3 = spawnAt(ENEMY_DEFS.soldier, laser.x + 35, laser.y, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  laser.fire(l3);
+  ok(laser.holdTime === 0 && laser.ramp === 1, 'Лазер сбрасывает нарастание при смене цели');
+
+  // Улей: рой пчёл по разным целям, после укуса пчёлы возвращаются
+  reset();
+  const hive = makeTower('hive');
+  const hiveTargets = [];
+  for (let i = 0; i < 8; i++) {
+    hiveTargets.push(spawnAt(ENEMY_DEFS.soldier, hive.x + 28 + i * 7, hive.y + ((i % 3) - 1) * 10, { hpMul: 100 }));
+  }
+  scene.collision.rebuild(scene.enemies);
+  hive.fire(hiveTargets[0]);
+  const bees = scene.projectiles.pool.filter((pr) => pr.active && pr.type === 3);
+  ok(bees.length === hive.bees, `Улей выпускает рой: ${bees.length}/${hive.bees} пчёл`);
+  ok(bees.every((pr) => !!pr.target), 'у каждой пчелы есть цель');
+  scene.projectiles.update(0.25);
+  ok(scene.projectiles.pool.some((pr) => pr.active && pr.returning), 'пчёлы возвращаются в улей после укуса');
+
+  // Ядерная: самонаводящаяся мина; эпицентр ослаблен относительно кольца
+  reset();
+  const nuke = makeTower('nuke');
+  const nTarget = spawnAt(ENEMY_DEFS.soldier, nuke.x + 50, nuke.y, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  nuke.fire(nTarget);
+  const shell = scene.projectiles.pool.find((pr) => pr.active && pr.type === 4);
+  ok(!!shell && shell.homing, 'Ядерная выпускает самонаводящуюся мину');
+
+  reset();
+  const boom = scene.projectiles.spawn({
+    type: 4, x: nuke.x, y: nuke.y, damage: 840,
+    splash: nuke.splash, innerGap: nuke.innerGap,
+    gapRatio: TOWER_DEFS.nuke.gapDamageRatio,
+    damageType: TOWER_DEFS.nuke.damageType, owner: nuke, speed: 200, life: 3
+  });
+  const center = spawnAt(ENEMY_DEFS.soldier, boom.x + 3, boom.y + 3, { hpMul: 100 });
+  const ring = spawnAt(ENEMY_DEFS.soldier, boom.x + (nuke.splash + nuke.innerGap) / 2, boom.y, { hpMul: 100 });
+  scene.collision.rebuild(scene.enemies);
+  const hc = center.hp, hr = ring.hp;
+  scene.projectiles.explode(boom, boom.x, boom.y);
+  const centerDmg = hc - center.hp, ringDmg = hr - ring.hp;
+  ok(centerDmg > 0 && centerDmg < ringDmg, `Ядерная: эпицентр ослаблен (${Math.round(centerDmg)} < ${Math.round(ringDmg)})`);
+
+  // Разблокировка: 11 звёзд открывают весь новый арсенал
+  const save = new SaveSystem();
+  save.data.mapStars = { grasslands: 3, desert: 2, magma: 3, city: 3 };
+  const fresh = save.syncUnlocks(TOWER_DEFS);
+  ok(['flame', 'laser', 'hive', 'nuke'].every((id) => fresh.includes(id) && save.isTowerUnlocked(id)),
+    `звёзды открывают новые башни: ${fresh.join(',')}`);
 }
 
 section('5. Формулы: HP-скейл, броня, замедление, воздушные цели');

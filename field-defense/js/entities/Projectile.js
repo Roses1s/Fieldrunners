@@ -38,6 +38,8 @@ class Projectile {
     this.target = null;
     this.damage = 0;
     this.splash = 0;
+    this.innerGap = 0;         // «пустой центр» взрыва (ядерная башня)
+    this.gapRatio = 0;         // доля урона внутри этого центра
     this.damageType = 'physical';
     this.pierceArmor = 0;
     this.life = 2;
@@ -77,7 +79,7 @@ export class ProjectilePool {
   }
 
   /**
-   * o = { type, x, y, target, speed, damage, splash, damageType, pierceArmor,
+   * o = { type, x, y, target, speed, damage, splash, innerGap, damageType, pierceArmor,
    *       slow, slowTime, slowTargets, owner, color, size, turn, life, angle }
    */
   spawn(o) {
@@ -90,6 +92,8 @@ export class ProjectilePool {
     p.speed = o.speed ?? 480;
     p.damage = o.damage ?? 1;
     p.splash = o.splash ?? 0;
+    p.innerGap = o.innerGap ?? 0;
+    p.gapRatio = o.gapRatio ?? 0;
     p.damageType = o.damageType ?? 'physical';
     p.pierceArmor = o.pierceArmor ?? 0;
     p.slow = o.slow ?? 0;
@@ -102,7 +106,7 @@ export class ProjectilePool {
     p.life = o.life ?? 2.5;
     p.t = 0;
     p.trail = 0;
-    p.homing = p.type === PROJ.MISSILE || p.type === PROJ.BEE || !!o.homing;
+    p.homing = p.type === PROJ.MISSILE || p.type === PROJ.BEE || p.type === PROJ.SHELL || !!o.homing;
     p.returning = false;
     p.homeX = o.homeX ?? p.x;
     p.homeY = o.homeY ?? p.y;
@@ -158,6 +162,18 @@ export class ProjectilePool {
             PT.SMOKE, 9, -8
           );
         }
+      } else if (p.type === PROJ.SHELL) {
+        p.trail -= dt;
+        if (p.trail <= 0) {
+          p.trail = 0.028;
+          g.particles.emit(
+            p.x - Math.cos(p.angle) * 5, p.y - Math.sin(p.angle) * 5,
+            randRange(-10, 10), randRange(-14, 2),
+            randRange(0.35, 0.7), randRange(2, 4),
+            Math.random() < 0.4 ? '#c6ff4f' : '#9a9a9a',
+            PT.SMOKE, 8, -10
+          );
+        }
       } else if (p.type === PROJ.BULLET) {
         p.trail -= dt;
         if (p.trail <= 0) {
@@ -211,7 +227,8 @@ export class ProjectilePool {
         p.active = false;
         break;
       }
-      case PROJ.MISSILE: {
+      case PROJ.MISSILE:
+      case PROJ.SHELL: {
         this.explode(p, p.x, p.y);
         p.active = false;
         break;
@@ -268,7 +285,8 @@ export class ProjectilePool {
   /** Взрыв с уроном по площади (ракеты, ядерный заряд) */
   explode(p, x, y) {
     const g = this.game;
-    const big = p.splash > 70;
+    const gap = p.innerGap || 0;      // > 0 — «пончик»: в эпицентре урон ослаблен
+    const big = p.splash > 70 || gap > 0;
     g.effects.spawn(1 /* EXPLOSION */, {
       x, y, size: Math.max(10, p.splash * 0.85), life: big ? 0.62 : 0.34,
       color: '#ffd9a0', width: big ? 4 : 2.4
@@ -290,17 +308,40 @@ export class ProjectilePool {
     g.effects.spawn(5 /* SCORCH */, {
       x, y: y + 2, size: p.splash * 0.55, life: big ? 6 : 3, angle: randRange(0, 3)
     });
+    if (gap > 0) {
+      // ядерный заряд: грибовидное облако + зелёная вспышка + кольцо эпицентра
+      g.effects.spawn(7 /* MUSHROOM */, {
+        x, y, size: p.splash * 0.9, size2: p.splash * 1.5, life: 1.1, color: '#c6ff4f'
+      });
+      g.effects.spawn(8 /* FLASH */, { x, y, size: p.splash * 1.2, life: 0.22, color: 'rgba(210,255,140,0.9)' });
+      g.effects.spawn(6 /* SHOCKWAVE */, {
+        x, y, size: gap, size2: p.splash * 1.15, life: 0.62,
+        color: 'rgba(198,255,79,0.85)', width: 4
+      });
+      g.particles.burst(x, y, {
+        count: 22, colors: ['#c6ff4f', '#8fd62f', '#e9ffb0'],
+        speed: [30, 130], life: [0.5, 1.1], size: [2, 5], gravity: -22, drag: 1.2, type: PT.SMOKE
+      });
+    }
     g.audio?.play(big ? 'nuke' : 'explosion', { big });
     if (big) g.camera?.shake(9, 0.5);
     else g.camera?.shake(2.2, 0.16);
 
-    // урон по площади с затуханием к краю
+    // урон по площади с затуханием к краю; в эпицентре — только gapRatio от полного
     const list = g.collision.queryCircle(x, y, p.splash, false);
+    const span = Math.max(1, p.splash - gap);
     for (let i = 0; i < list.length; i++) {
       const e = list[i];
       if (!e.alive) continue;
       const d = dist(x, y, e.x, e.y);
-      const k = clamp(1 - (d / (p.splash + e.radius)) * 0.65, 0.35, 1);
+      if (gap > 0 && d < gap + e.radius * 0.5) {
+        // эпицентр: урон ослаблен в gapRatio раз (мина прилетает ровно в цель,
+        // поэтому полный ноль сделал бы башню бесполезной против своей же цели)
+        g.damageEnemy(e, p.damage * (p.gapRatio || 0), p.damageType,
+          { pierceArmor: p.pierceArmor, source: p.owner });
+        continue;
+      }
+      const k = clamp(1 - ((d - gap) / (span + e.radius)) * 0.65, 0.35, 1);
       g.damageEnemy(e, p.damage * k, p.damageType, { pierceArmor: p.pierceArmor, source: p.owner });
     }
   }
@@ -328,6 +369,20 @@ export class ProjectilePool {
         }
         case PROJ.MISSILE: {
           Sprites.draw(g, 'proj.missile', p.x, p.y, { rot: p.angle, scale: 0.95 * p.size });
+          break;
+        }
+        case PROJ.SHELL: {
+          // визуальная навесная траектория: подъём по синусоиде + тень на земле
+          const k = clamp(p.life > 0 ? p.t / p.life : 0, 0, 1);
+          const lift = Math.sin(Math.PI * k) * 26;
+          g.save();
+          g.globalAlpha = 0.28;
+          g.fillStyle = '#000';
+          g.beginPath();
+          g.ellipse(p.x, p.y + 3, 6 * p.size, 2.6 * p.size, 0, 0, Math.PI * 2);
+          g.fill();
+          g.restore();
+          Sprites.draw(g, 'proj.shell', p.x, p.y - lift, { rot: p.angle, scale: p.size });
           break;
         }
         case PROJ.GLUE: {

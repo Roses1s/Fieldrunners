@@ -8,13 +8,14 @@
     "start": "node tools/serve.mjs",
     "dev": "node tools/serve.mjs 8080",
     "build": "node build.mjs",
-    "test": "node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs",
+    "test": "node build.mjs && node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs && node tests/bundle.mjs",
     "test:sim": "node tests/sim.mjs",
     "test:render": "node tests/render.mjs",
     "test:boot": "node tests/boot.mjs",
     "test:balance": "node tests/balance.mjs",
-    "test:all": "node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs && node tests/balance.mjs",
-    "check": "node build.mjs && node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs"
+    "test:all": "node build.mjs && node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs && node tests/bundle.mjs && node tests/balance.mjs",
+    "check": "node build.mjs && node tests/sim.mjs && node tests/render.mjs && node tests/boot.mjs && node tests/bundle.mjs",
+    "test:bundle": "node tests/bundle.mjs"
   },
   "engines": {
     "node": ">=18"

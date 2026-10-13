@@ -26,12 +26,20 @@ const { MAP_ORDER } = await import('../js/maps/MapData.js');
 const MAP = process.argv[2] || 'grasslands';
 const MAX_SECONDS = 40 * 60;   // ограничение прогона
 
-function makeGame() {
+function makeGame(mapId) {
+  const save = new SaveSystem();
+  // Имитируем нормальную прогрессию: к моменту открытия карты игрок уже
+  // прошёл предыдущие и накопил звёзды, которыми открываются новые башни.
+  const idx = Math.max(0, MAP_ORDER.indexOf(mapId));
+  save.data.mapStars = {};
+  for (let i = 0; i < idx; i++) save.data.mapStars[MAP_ORDER[i]] = 3;
+  save.syncUnlocks(TOWER_DEFS);
+
   return {
     viewW: 780, viewH: 360, dpr: 2,
     safe: { top: 0, right: 0, bottom: 0, left: 0 },
     camera: new Camera(),
-    save: new SaveSystem(),
+    save,
     audio: null, debug: false, debugGrid: false, time: 0,
     pushScene() {}, replaceScene() {}, popScene() { return null; },
     nextMapAfter() { return null; }, mapCountTotal() { return MAP_ORDER.length; },
@@ -39,14 +47,31 @@ function makeGame() {
   };
 }
 
-/** Сколько клеток дороги рядом с (cx, cy) — чем больше, тем лучше место */
-function spotScore(scene, cx, cy) {
+/** Клетки текущих маршрутов от всех входов к выходу */
+function routeCellSet(scene) {
   const g = scene.grid;
-  let score = 0;
+  const set = new Set();
+  for (const e of g.entries) {
+    const route = scene.path.routeFrom(g.idx(e.cx, e.cy));
+    if (route) for (const idx of route) set.add(idx);
+  }
+  if (!set.size) for (const idx of g.pathCells) set.add(idx);
+  return set;
+}
+
+/**
+ * Сколько клеток текущего маршрута рядом с (cx, cy) — чем больше, тем лучше место.
+ * На maze-картах даём бонус клетке прямо на маршруте: башня там не только стреляет,
+ * но и заставляет врагов огибать её, удлиняя путь.
+ */
+function spotScore(scene, cx, cy, routeSet) {
+  const g = scene.grid;
+  let score = routeSet.has(g.idx(cx, cy)) ? 4 : 0;
   for (let dy = -2; dy <= 2; dy++) {
     for (let dx = -2; dx <= 2; dx++) {
-      const t = g.tileAt(cx + dx, cy + dy);
-      if (t === 1 || t === 4 || t === 5) score += (Math.abs(dx) + Math.abs(dy) <= 1) ? 3 : 1;
+      const nx = cx + dx, ny = cy + dy;
+      if (!g.inBounds(nx, ny)) continue;
+      if (routeSet.has(g.idx(nx, ny))) score += (Math.abs(dx) + Math.abs(dy) <= 1) ? 3 : 1;
     }
   }
   return score;
@@ -54,27 +79,34 @@ function spotScore(scene, cx, cy) {
 
 function bestSpot(scene) {
   const g = scene.grid;
+  const routeSet = routeCellSet(scene);
   let best = null, bs = -1;
   for (let cy = 0; cy < g.rows; cy++) {
     for (let cx = 0; cx < g.cols; cx++) {
       if (!scene.canBuildAt(cx, cy)) continue;
-      const s = spotScore(scene, cx, cy);
+      const s = spotScore(scene, cx, cy, routeSet);
       if (s > bs) { bs = s; best = [cx, cy]; }
     }
   }
   return best && bs > 0 ? best : null;
 }
 
-/** Что купить на имеющиеся деньги */
+/** Что купить на имеющиеся деньги (из фактически открытых прогрессом башен) */
 function chooseTower(scene) {
   const money = scene.economy.money;
   const air = scene.enemies.some((e) => e.flying) || scene.waves.wave >= 5;
-  const options = ['gatling', 'glue', 'missile', 'tesla']
-    .map((id) => TOWER_DEFS[id])
-    .filter((d) => scene.isTowerAvailable(d.id) && d.cost <= money);
+  const options = scene.availableTowers().filter((d) => d.cost <= money);
   if (!options.length) return null;
-  if (air && money >= TOWER_DEFS.missile.cost && Math.random() < 0.55) return TOWER_DEFS.missile;
-  if (money >= TOWER_DEFS.tesla.cost && Math.random() < 0.45) return TOWER_DEFS.tesla;
+  const byId = Object.create(null);
+  for (const d of options) byId[d.id] = d;
+
+  if (air && byId.missile && Math.random() < 0.45) return byId.missile;
+  if (byId.nuke && scene.waves.wave >= 8 && Math.random() < 0.16) return byId.nuke;
+  if (byId.flame && Math.random() < 0.20) return byId.flame;
+  if (byId.hive && Math.random() < 0.20) return byId.hive;
+  if (byId.laser && Math.random() < 0.20) return byId.laser;
+  if (byId.tesla && Math.random() < 0.28) return byId.tesla;
+  if (byId.glue && Math.random() < 0.14) return byId.glue;
   // самая дорогая из доступных — обычно выгоднее
   return options.sort((a, b) => b.cost - a.cost)[0];
 }
@@ -98,7 +130,7 @@ function botAct(scene) {
 }
 
 function run(mapId) {
-  const game = makeGame();
+  const game = makeGame(mapId);
   const scene = new GameScene(game, { mapId });
   scene.enter();
   game.camera.resize(game.viewW, game.viewH, scene.worldW, scene.worldH);

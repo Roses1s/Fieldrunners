@@ -37,6 +37,10 @@ const ORDER = [
   'js/entities/towers/GlueTower.js',
   'js/entities/towers/MissileTower.js',
   'js/entities/towers/TeslaTower.js',
+  'js/entities/towers/FlameTower.js',
+  'js/entities/towers/LaserTower.js',
+  'js/entities/towers/HiveTower.js',
+  'js/entities/towers/NukeTower.js',
   'js/entities/towers/index.js',
   'js/entities/Enemy.js',
   'js/entities/enemies/Soldier.js',
@@ -57,6 +61,12 @@ const ORDER = [
   'js/systems/WaveSystem.js',
   'js/systems/UpgradeSystem.js',
   'js/systems/RenderSystem.js',
+
+  'js/maps/map_grasslands.js',
+  'js/maps/map_desert.js',
+  'js/maps/map_magma.js',
+  'js/maps/map_city.js',
+  'js/maps/MapData.js',
 
   'js/scenes/Scene.js',
   'js/scenes/GameHud.js',

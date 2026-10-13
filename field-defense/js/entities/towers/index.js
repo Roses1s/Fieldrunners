@@ -10,6 +10,10 @@ import './GatlingTower.js';
 import './GlueTower.js';
 import './MissileTower.js';
 import './TeslaTower.js';
+import './FlameTower.js';
+import './LaserTower.js';
+import './HiveTower.js';
+import './NukeTower.js';
 
 /** Создать башню по определению из TOWER_DEFS */
 export function createTower(game, def, cx, cy) {

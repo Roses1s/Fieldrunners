@@ -36,7 +36,7 @@ import { createTower } from '../entities/towers/index.js';
 import { createEnemy } from '../entities/enemies/index.js';
 
 import { getMap } from '../maps/MapData.js';
-import { TOWER_DEFS, PROTOTYPE_TOWERS } from '../data/TowerData.js';
+import { TOWER_DEFS, PROTOTYPE_TOWERS, BUILD_ORDER } from '../data/TowerData.js';
 import { ENEMY_DEFS } from '../data/EnemyData.js';
 
 export class GameScene extends Scene {
@@ -274,7 +274,9 @@ export class GameScene extends Scene {
         const next = this.game.nextMapAfter(this.mapId);
         if (next) this.save.unlockMap(next);
       }
-      this.result = { won, stars, coins, leaks, best };
+      // звёзды могли открыть новую башню — сообщаем игроку
+      const fresh = this.save.syncUnlocks(TOWER_DEFS);
+      this.result = { won, stars, coins, leaks, best, unlocked: fresh };
     }
 
     this.game.pushScene(new GameOverScene(this.game, {
@@ -346,7 +348,8 @@ export class GameScene extends Scene {
 
   /** Какие башни доступны игроку на этой карте */
   availableTowers() {
-    const allowed = this.mapDef.towers || PROTOTYPE_TOWERS;
+    // карта может ограничить набор полем towers; по умолчанию — весь каталог
+    const allowed = this.mapDef.towers || BUILD_ORDER;
     return allowed
       .map((id) => TOWER_DEFS[id])
       .filter((d) => d && this.isTowerAvailable(d.id));

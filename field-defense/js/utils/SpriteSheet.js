@@ -909,6 +909,205 @@ reg('decor.building.0', () => buildBuilding(3));
 reg('decor.building.1', () => buildBuilding(71));
 reg('decor.building.2', () => buildBuilding(211));
 
+/* ==========================================================================
+   Турели второй очереди: Пиро, Лазер, Улей, Ядерная.
+   Все рисуются кодом, «вправо» = угол 0 (как у остальных башен).
+   ========================================================================== */
+
+/** Пиро: бак со смесью + широкое сопло конусом + дежурный огонёк */
+function buildFlameTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 1;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#c3ccd8' : '#8b95a5');
+
+  // бак(и) со смесью
+  fillRR(g, 8, cy - 12, 18, 25, 6, vgrad(g, 8, cy - 12, 18, 25, '#d8643a', '#8e3620'), 2.2);
+  g.strokeStyle = 'rgba(0,0,0,0.28)'; g.lineWidth = 1.8;
+  for (let i = 0; i < 3; i++) {
+    g.beginPath(); g.moveTo(9, cy - 7 + i * 7); g.lineTo(25, cy - 7 + i * 7); g.stroke();
+  }
+  if (level >= 1) {
+    // второй бак на уровнях 2–3
+    fillRR(g, 12, cy - 19, 12, 9, 4, vgrad(g, 12, cy - 19, 12, 9, '#e07a4a', '#93401f'), 2);
+  }
+  // манометр
+  circle(g, 15, cy - 3, 3.2, '#2b2f3a', 1.4, trim);
+  g.strokeStyle = '#c6ff4f'; g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(15, cy - 3); g.lineTo(17, cy - 5); g.stroke();
+
+  // сопло: расширяющийся конус
+  const nw = 7 + level * 1.6;
+  poly(g, [26, cy - 4, 44, cy - nw, 46, cy - nw + 1.5, 46, cy + nw - 1.5, 44, cy + nw, 26, cy + 4],
+    vgrad(g, 26, cy - nw, 20, nw * 2, '#6f7683', '#3b414d'), 2.2);
+  // раструб
+  fillRR(g, 43, cy - nw - 0.5, 5, nw * 2 + 1, 2, trim, 1.8);
+  // дежурный огонёк у среза
+  const fl = g.createRadialGradient(49, cy, 0.5, 49, cy, 6 + level);
+  fl.addColorStop(0, 'rgba(255,255,220,0.95)');
+  fl.addColorStop(0.45, 'rgba(255,155,61,0.75)');
+  fl.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = fl;
+  g.beginPath(); g.arc(49, cy, 6 + level, 0, Math.PI * 2); g.fill();
+  // шланг
+  g.strokeStyle = '#5a3a2a'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(17, cy + 13); g.quadraticCurveTo(24, cy + 21, 31, cy + 9); g.stroke();
+  return c;
+}
+
+/** Лазер: корпус с двумя излучателями, фокусирующий кристалл, радиатор */
+function buildLaserTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 1;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#dfe7f2' : '#9aa3b5');
+
+  // радиатор сзади
+  g.strokeStyle = '#4a5162'; g.lineWidth = 2;
+  for (let i = 0; i < 3 + level; i++) {
+    const x = 9 + i * 3.2;
+    g.beginPath(); g.moveTo(x, cy - 11); g.lineTo(x, cy + 11); g.stroke();
+  }
+  // корпус
+  fillRR(g, 14, cy - 8, 24, 16, 5, vgrad(g, 14, cy - 8, 24, 16, '#8a6fc0', '#4d3a75'), 2.2);
+  // два излучателя (рельсы)
+  fillRR(g, 30, cy - 9.5, 16, 5, 2.2, vgrad(g, 30, cy - 9.5, 16, 5, '#cfd6e4', '#6c7486'), 1.8);
+  fillRR(g, 30, cy + 4.5, 16, 5, 2.2, vgrad(g, 30, cy + 4.5, 16, 5, '#cfd6e4', '#6c7486'), 1.8);
+  // кристалл в фокусе
+  const cx0 = 45, cr = 4.2 + level * 0.9;
+  const lg = g.createRadialGradient(cx0, cy, 0.5, cx0, cy, cr * 2.6);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.35, '#ff5ad1');
+  lg.addColorStop(1, 'rgba(255,90,209,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(cx0, cy, cr * 2.6, 0, Math.PI * 2); g.fill();
+  poly(g, [cx0, cy - cr, cx0 + cr * 0.85, cy, cx0, cy + cr, cx0 - cr * 0.85, cy],
+    '#ffd9f4', 1.6, trim);
+  // энерго-шляпка сверху
+  circle(g, 20, cy - 10, 2.6, '#ff5ad1', 1.4, trim);
+  return c;
+}
+
+/** Улей: блок сот + леток + пара пчёл на подлёте */
+function buildHiveTurret(level) {
+  const S = 54;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 2;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#c9a227' : '#8b7a3a');
+
+  // корпус улья
+  fillRR(g, 10, cy - 15, 26, 30, 6, vgrad(g, 10, cy - 15, 26, 30, '#e0b84a', '#8a6a1c'), 2.4);
+  // соты (шестиугольники)
+  const hex = (hx, hy, r) => {
+    g.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + i * Math.PI / 3;
+      const px = hx + Math.cos(a) * r, py = hy + Math.sin(a) * r;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+  };
+  const rows = 2 + level;
+  for (let ry = 0; ry < rows; ry++) {
+    for (let rx = 0; rx < 2; rx++) {
+      const hx = 17 + rx * 12, hy = cy - 9 + ry * (18 / rows) + (rx % 2 ? 3 : 0);
+      hex(hx, hy, 4.6);
+      g.fillStyle = 'rgba(60,40,10,0.55)'; g.fill();
+      g.strokeStyle = 'rgba(255,235,160,0.5)'; g.lineWidth = 1; g.stroke();
+    }
+  }
+  // леток (щель) спереди
+  fillRR(g, 34, cy - 3, 8, 6, 2.5, '#3a2c0c', 1.8);
+  // посадочная полка
+  fillRR(g, 32, cy + 4, 12, 3.4, 1.6, trim, 1.4);
+  // пчёлы на подлёте
+  const bee = (bx, by, sc) => {
+    g.save(); g.translate(bx, by); g.scale(sc, sc);
+    g.fillStyle = '#ffe66d';
+    g.beginPath(); g.ellipse(0, 0, 3.4, 2.4, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#3a2c0c'; g.lineWidth = 1.1;
+    g.beginPath(); g.moveTo(-0.6, -2.2); g.lineTo(-0.6, 2.2); g.moveTo(1.6, -2); g.lineTo(1.6, 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.6)';
+    g.beginPath(); g.ellipse(-0.6, -3, 2.6, 1.3, -0.4, 0, Math.PI * 2); g.fill();
+    g.restore();
+  };
+  bee(44, cy - 8, 1 + level * 0.1);
+  if (level >= 1) bee(47, cy + 6, 0.9);
+  if (level >= 2) bee(41, cy + 12, 0.8);
+  return c;
+}
+
+/** Ядерная: короткая мортира с толстым стволом, зелёный заряд, опознавательные полосы */
+function buildNukeTurret(level) {
+  const S = 56;
+  const c = makeCanvas(S, S), g = ctxOf(c);
+  const cy = S / 2 + 3;
+  const trim = level === 2 ? '#ffd23f' : (level === 1 ? '#b9c4d6' : '#7d8798');
+
+  // станина
+  fillRR(g, 8, cy - 6, 22, 18, 4, vgrad(g, 8, cy - 6, 22, 18, '#6b7480', '#39414c'), 2.4);
+  // опознавательные полосы (опасный груз)
+  g.save();
+  rr(g, 9, cy + 5, 20, 6, 2); g.clip();
+  g.strokeStyle = '#c6ff4f'; g.lineWidth = 2.4;
+  for (let i = -1; i < 6; i++) {
+    g.beginPath(); g.moveTo(9 + i * 5, cy + 12); g.lineTo(9 + i * 5 + 6, cy + 3); g.stroke();
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 1.6;
+  rr(g, 9, cy + 5, 20, 6, 2); g.stroke();
+
+  // толстый ствол мортиры (задран вверх-вперёд)
+  const bw = 8 + level * 1.3;
+  g.save();
+  g.translate(24, cy - 4);
+  g.rotate(-0.34);
+  fillRR(g, 0, -bw / 2, 24, bw, 3, vgrad(g, 0, -bw / 2, 24, bw, '#7e8898', '#414a58'), 2.2);
+  // дульный срез
+  fillRR(g, 21, -bw / 2 - 1, 5, bw + 2, 2, trim, 1.8);
+  // бандажи
+  g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 2;
+  for (let i = 0; i < 2 + level; i++) {
+    const x = 5 + i * 6;
+    g.beginPath(); g.moveTo(x, -bw / 2 + 1); g.lineTo(x, bw / 2 - 1); g.stroke();
+  }
+  g.restore();
+
+  // заряд в стволе: зелёное свечение
+  const gx = 47, gy = cy - 12;
+  const lg = g.createRadialGradient(gx, gy, 0.5, gx, gy, 8 + level * 1.5);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c6ff4f');
+  lg.addColorStop(1, 'rgba(140,214,47,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(gx, gy, 8 + level * 1.5, 0, Math.PI * 2); g.fill();
+  circle(g, gx, gy, 3.4, '#e9ffb0', 1.6, '#6f9a24');
+  // гидроцилиндр подъёма
+  g.strokeStyle = '#2f3540'; g.lineWidth = 3.4;
+  g.beginPath(); g.moveTo(14, cy + 4); g.lineTo(24, cy - 8); g.stroke();
+  g.strokeStyle = trim; g.lineWidth = 1.4;
+  g.beginPath(); g.moveTo(14, cy + 4); g.lineTo(24, cy - 8); g.stroke();
+  return c;
+}
+
+/** Мина ядерного заряда: тёмный корпус, зелёная головка, хвостовые перья */
+function buildShell() {
+  const c = makeCanvas(20, 10), g = ctxOf(c);
+  // перья
+  poly(g, [1, 5, 5, 1.5, 6.5, 5, 5, 8.5], '#6f9a24', 1.2);
+  // корпус
+  fillRR(g, 5, 2.6, 9, 4.8, 2.2, vgrad(g, 5, 2.6, 9, 4.8, '#8b929e', '#3d434e'), 1.4);
+  // головка
+  const lg = g.createRadialGradient(16, 5, 0.4, 16, 5, 4.4);
+  lg.addColorStop(0, '#ffffff');
+  lg.addColorStop(0.4, '#c6ff4f');
+  lg.addColorStop(1, 'rgba(140,214,47,0)');
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(16, 5, 4.4, 0, Math.PI * 2); g.fill();
+  circle(g, 15.6, 5, 2.2, '#e9ffb0', 1.2, '#6f9a24');
+  return c;
+}
+
 // Башни
 for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.base.${lvl}`, () => buildTowerBase(lvl));
@@ -916,6 +1115,10 @@ for (let lvl = 0; lvl < 3; lvl++) {
   reg(`tower.glue.${lvl}`, () => buildGlueTurret(lvl));
   reg(`tower.missile.${lvl}`, () => buildMissileTurret(lvl));
   reg(`tower.tesla.${lvl}`, () => buildTeslaTurret(lvl));
+  reg(`tower.flame.${lvl}`, () => buildFlameTurret(lvl));
+  reg(`tower.laser.${lvl}`, () => buildLaserTurret(lvl));
+  reg(`tower.hive.${lvl}`, () => buildHiveTurret(lvl));
+  reg(`tower.nuke.${lvl}`, () => buildNukeTurret(lvl));
 }
 
 // Враги
@@ -932,6 +1135,7 @@ reg('proj.bullet', buildBullet);
 reg('proj.missile', buildMissile);
 reg('proj.glue', buildGlueBlob);
 reg('proj.bee', buildBee);
+reg('proj.shell', buildShell);
 
 // Иконки
 reg('icon.coin', buildCoin);

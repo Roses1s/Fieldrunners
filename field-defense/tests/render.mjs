@@ -149,7 +149,7 @@ const { GameOverScene } = await import('../js/scenes/GameOverScene.js');
 const hudMod = await import('../js/scenes/GameHud.js');
 const { GameHud } = hudMod;
 const { ENEMY_DEFS } = await import('../js/data/EnemyData.js');
-const { TOWER_DEFS } = await import('../js/data/TowerData.js');
+const { TOWER_DEFS, BUILD_ORDER } = await import('../js/data/TowerData.js');
 const { createEnemy } = await import('../js/entities/enemies/index.js');
 const { createTower } = await import('../js/entities/towers/index.js');
 const { MAP_ORDER } = await import('../js/maps/MapData.js');
@@ -207,10 +207,10 @@ section('1. Процедурные спрайты: генерация всех �
     'building.0', 'building.1', 'building.2']) keys.push(`decor.${d}`);
   for (let l = 0; l < 3; l++) {
     keys.push(`tower.base.${l}`);
-    for (const t of ['gatling', 'glue', 'missile', 'tesla']) keys.push(`tower.${t}.${l}`);
+    for (const t of BUILD_ORDER) keys.push(`tower.${t}.${l}`);
   }
   for (const e of Object.keys(ENEMY_DEFS)) keys.push(`enemy.${e}`);
-  for (const p of ['bullet', 'missile', 'glue', 'bee']) keys.push(`proj.${p}`);
+  for (const p of ['bullet', 'missile', 'glue', 'bee', 'shell']) keys.push(`proj.${p}`);
   for (const i of ['coin', 'heart', 'star', 'starEmpty', 'play', 'pause', 'ff', 'gear',
     'home', 'restart', 'sell', 'up', 'target', 'lock', 'sound', 'mute', 'close', 'wave', 'skull']) {
     keys.push(`icon.${i}`);
