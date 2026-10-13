@@ -4051,6 +4051,15 @@ class Tower {
     const s = 0.55 + 0.45 * clamp(grow * 1.25, 0, 1);
     const lift = (1 - clamp(grow * 1.4, 0, 1)) * 10;
 
+    // мягкая контактная тень под плитой — башня «стоит» на земле, а не висит
+    g.save();
+    g.globalAlpha = 0.30 * clamp(grow * 2, 0, 1);
+    g.fillStyle = '#000';
+    g.beginPath();
+    g.ellipse(this.x, this.y + 13, 21 * s, 8 * s, 0, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+
     g.save();
     g.translate(this.x, this.y + lift);
 
@@ -5629,8 +5638,14 @@ class Enemy {
     // появление: полупрозрачность + выезд снизу
     const appear = this.spawnAnim > 0 ? 1 - this.spawnAnim : 1;
 
+    // живое покачивание: техника слегка раскачивается на ходу,
+    // воздушные цели наклоняются, пехота анимируется кадрами ног
+    const rock = this.flying
+      ? Math.sin(this.animT * 2.4) * 0.05
+      : (this.radius >= 10 ? Math.sin(this.animT * 9) * 0.018 : 0);
+
     Sprites.drawFrame(g, this.spriteKey, frame, this.x, drawY + (this.spawnAnim * 6), {
-      scale: s, flip, alpha: clamp(appear * 1.6, 0, 1), align: 'center'
+      scale: s, flip, rot: rock, alpha: clamp(appear * 1.6, 0, 1), align: 'center'
     });
 
     this.renderExtra(g, frame, flip, s, drawY);
@@ -7820,6 +7835,35 @@ class RenderSystem {
       }
     }
 
+    // ---- 1.5 фактурная крошка по земле (запекается, детерминированно) ----
+    {
+      const drng = makeRng((g.def.seed || 7) + 901);
+      c.save();
+      for (let cy = 0; cy < g.rows; cy++) {
+        for (let cx = 0; cx < g.cols; cx++) {
+          const bx = cx * CELL, by = cy * CELL;
+          for (let k = 0; k < 3; k++) {
+            const x = bx + drng() * CELL, y = by + drng() * CELL;
+            if (g.biome === 'grass') {
+              c.strokeStyle = 'rgba(38,92,28,0.5)';
+              c.lineWidth = 1.4;
+              c.beginPath(); c.moveTo(x, y); c.lineTo(x + (drng() - 0.5) * 3, y - 2.5 - drng() * 3); c.stroke();
+            } else if (g.biome === 'desert') {
+              c.fillStyle = 'rgba(120,84,40,0.35)';
+              c.beginPath(); c.arc(x, y, 0.8 + drng() * 1.4, 0, Math.PI * 2); c.fill();
+            } else if (g.biome === 'lava') {
+              c.fillStyle = 'rgba(0,0,0,0.30)';
+              c.beginPath(); c.arc(x, y, 0.8 + drng() * 1.6, 0, Math.PI * 2); c.fill();
+            } else {
+              c.fillStyle = 'rgba(255,255,255,0.10)';
+              c.fillRect(x, y, 1.6, 1.6);
+            }
+          }
+        }
+      }
+      c.restore();
+    }
+
     // ---- 2. зоны (вода / скалы / лава) ----
     for (const z of (g.zones || [])) this._drawZone(c, z);
 
@@ -7995,6 +8039,19 @@ class RenderSystem {
 
     trace(CELL * 0.94, pal.pathEdge);     // обочина
     trace(CELL * 0.8, pal.path);          // полотно
+    // светлая кромка по верхней стороне — дорога «поднята» над землёй
+    c.save();
+    c.translate(0, -CELL * 0.36);
+    c.globalAlpha = 0.20;
+    trace(2, '#ffffff');
+    c.restore();
+    // пунктирная центральная линия — читаемая разметка маршрута
+    c.save();
+    c.setLineDash([12, 16]);
+    c.globalAlpha = 0.28;
+    trace(3, '#ffffff');
+    c.setLineDash([]);
+    c.restore()
     // колеи
     c.save();
     c.globalAlpha = 0.16;
@@ -8471,6 +8528,32 @@ class RenderSystem {
       g.beginPath();
       g.arc(x, y, CELL * 0.7 + pulse * 3, 0, Math.PI * 2);
       g.stroke();
+    }
+
+    // бегущие шевроны по фиксированной дороге: волна подсветки идёт
+    // от входа к выходу и сразу показывает направление потока
+    const path = this.game.path;
+    if (!grid.maze && grid.pathCells && path) {
+      g.lineWidth = 2.4;
+      g.lineCap = 'round';
+      for (let i = 2; i < grid.pathCells.length - 1; i += 3) {
+        const idx = grid.pathCells[i];
+        const nxt = path.nextFrom(idx);
+        if (nxt < 0) continue;
+        const a = grid.center(idx, { x: 0, y: 0 });
+        const b = grid.center(nxt, { x: 0, y: 0 });
+        const ang = Math.atan2(b.y - a.y, b.x - a.x);
+        const wave = 0.5 + 0.5 * Math.sin(time * 4 - i * 0.55);
+        g.save();
+        g.translate(a.x, a.y);
+        g.rotate(ang);
+        g.globalAlpha = 0.14 + wave * 0.30;
+        g.strokeStyle = '#ffffff';
+        g.beginPath();
+        g.moveTo(-4, -6); g.lineTo(4, 0); g.lineTo(-4, 6);
+        g.stroke();
+        g.restore();
+      }
     }
     g.restore();
   }

@@ -430,8 +430,14 @@ export class Enemy {
     // появление: полупрозрачность + выезд снизу
     const appear = this.spawnAnim > 0 ? 1 - this.spawnAnim : 1;
 
+    // живое покачивание: техника слегка раскачивается на ходу,
+    // воздушные цели наклоняются, пехота анимируется кадрами ног
+    const rock = this.flying
+      ? Math.sin(this.animT * 2.4) * 0.05
+      : (this.radius >= 10 ? Math.sin(this.animT * 9) * 0.018 : 0);
+
     Sprites.drawFrame(g, this.spriteKey, frame, this.x, drawY + (this.spawnAnim * 6), {
-      scale: s, flip, alpha: clamp(appear * 1.6, 0, 1), align: 'center'
+      scale: s, flip, rot: rock, alpha: clamp(appear * 1.6, 0, 1), align: 'center'
     });
 
     this.renderExtra(g, frame, flip, s, drawY);

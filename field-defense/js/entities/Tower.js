@@ -195,6 +195,15 @@ export class Tower {
     const s = 0.55 + 0.45 * clamp(grow * 1.25, 0, 1);
     const lift = (1 - clamp(grow * 1.4, 0, 1)) * 10;
 
+    // мягкая контактная тень под плитой — башня «стоит» на земле, а не висит
+    g.save();
+    g.globalAlpha = 0.30 * clamp(grow * 2, 0, 1);
+    g.fillStyle = '#000';
+    g.beginPath();
+    g.ellipse(this.x, this.y + 13, 21 * s, 8 * s, 0, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+
     g.save();
     g.translate(this.x, this.y + lift);
 
